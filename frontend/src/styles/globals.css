@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 15, 23, 42;
+  --background-start-rgb: 241, 245, 249;
+  --background-end-rgb: 255, 255, 255;
+  
+  --primary: 15, 118, 110;     /* Teal 700 */
+  --primary-hover: 13, 148, 136; /* Teal 600 */
+  --secondary: 14, 116, 144;   /* Cyan 700 */
+  --accent: 244, 63, 94;       /* Rose 500 */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 241, 245, 249;
+    --background-start-rgb: 9, 15, 26;
+    --background-end-rgb: 15, 23, 42;
+    
+    --primary: 20, 184, 166;     /* Teal 500 */
+    --primary-hover: 45, 212, 191; /* Teal 400 */
+    --secondary: 6, 182, 212;    /* Cyan 500 */
+    --accent: 251, 113, 133;     /* Rose 400 */
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      rgb(var(--background-start-rgb)),
+      rgb(var(--background-end-rgb))
+    )
+    no-repeat;
+  min-height: 100vh;
+  font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism card utility */
+.glass-card {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.05);
+}
+
+.dark .glass-card {
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Hover scales & micro-animations */
+.hover-scale {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.hover-scale:hover {
+  transform: translateY(-4px) scale(1.015);
+}
+
+/* Custom background mesh */
+.bg-mesh {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: -10;
+  opacity: 0.4;
+  background-image: 
+    radial-gradient(at 10% 20%, rgba(20, 184, 166, 0.15) 0px, transparent 50%),
+    radial-gradient(at 90% 10%, rgba(6, 182, 212, 0.15) 0px, transparent 50%),
+    radial-gradient(at 50% 80%, rgba(99, 102, 241, 0.1) 0px, transparent 50%);
+  filter: blur(80px);
+}
+
+.dark .bg-mesh {
+  opacity: 0.25;
+  background-image: 
+    radial-gradient(at 10% 20%, rgba(20, 184, 166, 0.2) 0px, transparent 50%),
+    radial-gradient(at 90% 10%, rgba(6, 182, 212, 0.2) 0px, transparent 50%),
+    radial-gradient(at 50% 80%, rgba(99, 102, 241, 0.15) 0px, transparent 50%);
+}
+
+/* Custom loading skeleton animation */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .4;
+  }
+}
+
+.skeleton {
+  background: rgba(203, 213, 225, 0.5);
+  animation: pulse-slow 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.dark .skeleton {
+  background: rgba(51, 65, 85, 0.5);
+}
