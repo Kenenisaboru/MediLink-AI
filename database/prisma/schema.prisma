@@ -1,0 +1,307 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SUPER_ADMIN
+  HOSPITAL_ADMIN
+  DOCTOR
+  NURSE
+  LAB_STAFF
+  PHARMACY
+  AMBULANCE_DRIVER
+  PATIENT
+}
+
+enum AppointmentStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
+enum SOSStatus {
+  PENDING
+  ACTIVE
+  RESOLVED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum PaymentGateway {
+  TELEBIRR
+  CHAPA
+  SANTIMPAY
+  CBEBIRR
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String?  @unique
+  phone         String   @unique
+  passwordHash  String
+  role          Role     @default(PATIENT)
+  isVerified    Boolean  @default(false)
+  otpCode       String?
+  otpExpiresAt  DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+  notifications Notification[]
+
+  // Profiles
+  patientProfile   PatientProfile?
+  doctorProfile    DoctorProfile?
+  hospitalAdmin    HospitalAdminProfile?
+  nurseProfile     NurseProfile?
+  labProfile       LabProfile?
+  pharmacyProfile  PharmacyProfile?
+  ambulanceDriver  AmbulanceDriverProfile?
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Hospital {
+  id                   String                 @id @default(uuid())
+  name                 String
+  address              String
+  city                 String
+  latitude             Float
+  longitude            Float
+  contactNumber        String
+  isEmergencyAvailable Boolean                @default(true)
+  totalBeds            Int                    @default(0)
+  occupiedBeds         Int                    @default(0)
+  totalICUBeds         Int                    @default(0)
+  occupiedICUBeds      Int                    @default(0)
+  queueLength          Int                    @default(0)
+  rating               Float                  @default(5.0)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  doctors              DoctorProfile[]
+  nurses               NurseProfile[]
+  admins               HospitalAdminProfile[]
+  bloodStocks          BloodStock[]
+}
+
+model HospitalAdminProfile {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hospitalId String
+  hospital   Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  fullName   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model PatientProfile {
+  id                    String            @id @default(uuid())
+  userId                String            @unique
+  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName              String
+  gender                String
+  dateOfBirth           DateTime
+  bloodGroup            String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  allergies             String[]          @default([])
+  chronicDiseases       String[]          @default([])
+  surgeries             String[]          @default([])
+  vaccinations          String[]          @default([])
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  appointments          Appointment[]
+  medicalRecords        MedicalRecord[]
+  emergencySOSs         EmergencySOS[]
+  transactions          Transaction[]
+}
+
+model DoctorProfile {
+  id                 String            @id @default(uuid())
+  userId             String            @unique
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName           String
+  specialty          String
+  licenseNumber      String            @unique
+  experienceYears    Int               @default(0)
+  rating             Float             @default(5.0)
+  waitingTimeMinutes Int               @default(15)
+  bio                String?
+  languagesSpoken    String[]          @default(["English", "Amharic"])
+  hospitalId         String
+  hospital           Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  appointments       Appointment[]
+  medicalRecords     MedicalRecord[]
+}
+
+model NurseProfile {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName   String
+  department String
+  hospitalId String
+  hospital   Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model LabProfile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  address       String
+  contactNumber String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model PharmacyProfile {
+  id            String          @id @default(uuid())
+  userId        String          @unique
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  address       String
+  contactNumber String
+  latitude      Float
+  longitude     Float
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  inventory     InventoryItem[]
+}
+
+model AmbulanceDriverProfile {
+  id            String         @id @default(uuid())
+  userId        String         @unique
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  driverName    String
+  vehicleNumber String         @unique
+  isAvailable   Boolean        @default(true)
+  latitude      Float
+  longitude     Float
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  dispatches    EmergencySOS[]
+}
+
+model MedicalRecord {
+  id               String          @id @default(uuid())
+  patientId        String
+  patient          PatientProfile  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId         String
+  doctor           DoctorProfile   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  date             DateTime        @default(now())
+  diagnosis        String
+  notes            String
+  // JSON array of medications: [{ name, dosage, frequency, days }]
+  prescriptions    Json            @default("[]")
+  // JSON array of lab tests: [{ name, instructions, result, status }]
+  labRequests      Json            @default("[]")
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  transactions     Transaction[]
+}
+
+model Appointment {
+  id                 String            @id @default(uuid())
+  patientId          String
+  patient            PatientProfile    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId           String
+  doctor             DoctorProfile     @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  dateTime           DateTime
+  status             AppointmentStatus @default(PENDING)
+  notes              String?
+  telemedicineRoomId String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+}
+
+model EmergencySOS {
+  id                  String                  @id @default(uuid())
+  patientId           String
+  patient             PatientProfile          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  latitude            Float
+  longitude           Float
+  status              SOSStatus               @default(PENDING)
+  dispatchedDriverId  String?
+  dispatchedDriver    AmbulanceDriverProfile? @relation(fields: [dispatchedDriverId], references: [id], onDelete: SetNull)
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+}
+
+model InventoryItem {
+  id             String          @id @default(uuid())
+  pharmacyId     String
+  pharmacy       PharmacyProfile @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
+  name           String
+  quantity       Int             @default(0)
+  price          Float
+  expirationDate DateTime
+  batchNumber    String
+  category       String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model BloodStock {
+  id          String   @id @default(uuid())
+  bloodGroup  String   // e.g. "A+", "O-", etc.
+  bagsCount   Int      @default(0)
+  hospitalId  String
+  hospital    Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Transaction {
+  id              String         @id @default(uuid())
+  patientId       String
+  patient         PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  medicalRecordId String?
+  medicalRecord   MedicalRecord? @relation(fields: [medicalRecordId], references: [id], onDelete: SetNull)
+  amount          Float
+  currency        String         @default("ETB")
+  status          PaymentStatus  @default(PENDING)
+  reference       String         @unique
+  gateway         PaymentGateway
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String
+  type      String   @default("INFO") // INFO, EMERGENCY, REMINDER
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

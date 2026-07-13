@@ -1,0 +1,40 @@
+{
+  "name": "medilink-ai-backend",
+  "version": "1.0.0",
+  "description": "MediLink AI Backend - Express, TypeScript, Prisma, Socket.io, Gemini",
+  "main": "dist/app.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
+    "build": "tsc",
+    "start": "node dist/app.js",
+    "prisma:generate": "prisma generate --schema=../database/prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema=../database/prisma/schema.prisma",
+    "prisma:seed": "prisma db seed --schema=../database/prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.11.0",
+    "@prisma/client": "^5.14.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.2.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "socket.io": "^4.7.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^20.12.12",
+    "prisma": "^5.14.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.4.5"
+  },
+  "prisma": {
+    "seed": "ts-node ../database/prisma/seed.ts"
+  }
+}
