@@ -77,7 +77,7 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
   const [language, setLanguage] = useState<Language>('en');
 
   // Load saved preference
@@ -94,8 +94,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const t = (key: string): string => {
-    if (!translations[key]) return key;
-    return translations[key][language] || translations[key]['en'] || key;
+    const translation = translations[key];
+    if (!translation) return key;
+    return translation[language] || translation['en'] || key;
   };
 
   return (
