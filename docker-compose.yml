@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: medilink_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: medilink_user
+      POSTGRES_PASSWORD: medilink_password
+      POSTGRES_DB: medilink_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medilink_user -d medilink_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: medilink_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: medilink_backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      DATABASE_URL: "postgresql://medilink_user:medilink_password@postgres:5432/medilink_db?schema=public"
+      JWT_SECRET: "super_secret_jwt_access_token_key_medilink_ai_2026"
+      JWT_REFRESH_SECRET: "super_secret_jwt_refresh_token_key_medilink_ai_2026"
+      GEMINI_API_KEY: "AIzaSyMockAPIKeyHereForSymptomChecker"
+      NODE_ENV: "production"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "npx prisma migrate deploy --schema=../database/prisma/schema.prisma &&
+             npx prisma db seed --schema=../database/prisma/schema.prisma &&
+             node dist/app.js"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    container_name: medilink_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      NEXT_PUBLIC_API_URL: "http://localhost:5000/api"
+      NEXT_PUBLIC_SOCKET_URL: "http://localhost:5000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
