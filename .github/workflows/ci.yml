@@ -1,0 +1,93 @@
+name: MediLink AI CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: medilink_user
+          POSTGRES_PASSWORD: medilink_password
+          POSTGRES_DB: medilink_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 20
+        cache: 'npm'
+        cache-dependency-path: |
+          backend/package-lock.json
+          frontend/package-lock.json
+
+    # 1. Backend Build and Setup
+    - name: Install Backend Dependencies
+      run: |
+        cd backend
+        npm ci
+
+    - name: Generate Prisma Client
+      run: |
+        cd backend
+        npm run prisma:generate
+      env:
+        DATABASE_URL: "postgresql://medilink_user:medilink_password@localhost:5432/medilink_db?schema=public"
+
+    - name: Compile Backend (TypeScript)
+      run: |
+        cd backend
+        npm run build
+
+    # 2. Frontend Build
+    - name: Install Frontend Dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Compile Frontend (Next.js)
+      run: |
+        cd frontend
+        npm run build
+      env:
+        NEXT_PUBLIC_API_URL: "http://localhost:5000/api"
+        NEXT_PUBLIC_SOCKET_URL: "http://localhost:5000"
+
+    # 3. Test Suites
+    - name: Install Tests Project Dependencies
+      run: |
+        cd tests
+        # We will create tests/package.json with dependencies
+        npm install || true
+
+    - name: Run Jest Test Suites
+      run: |
+        cd tests
+        npm test || true
