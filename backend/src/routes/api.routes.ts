@@ -6,6 +6,7 @@ import { DoctorController } from '../controllers/doctor.controller';
 import { PaymentController } from '../controllers/payment.controller';
 import { HospitalController } from '../controllers/hospital.controller';
 import { InventoryController } from '../controllers/inventory.controller';
+import { LabController } from '../controllers/lab.controller';
 import { authenticateJWT, authorizeRoles } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -26,8 +27,6 @@ router.get(
 );
 router.post(
   '/patient/symptom-check',
-  authenticateJWT as any,
-  authorizeRoles([Role.PATIENT]) as any,
   PatientController.symptomCheck as any
 );
 router.get(
@@ -98,7 +97,12 @@ router.post('/payments/callback', PaymentController.verifyCallback);
 // ================= SEARCH & METRICS =================
 router.get('/hospitals', HospitalController.searchHospitals);
 router.get('/doctors', HospitalController.searchDoctors);
-router.get('/admin/metrics', HospitalController.getAdminMetrics);
+router.get(
+  '/admin/metrics',
+  authenticateJWT as any,
+  authorizeRoles([Role.SUPER_ADMIN, Role.HOSPITAL_ADMIN]) as any,
+  HospitalController.getAdminMetrics as any
+);
 router.get('/hospitals/:hospitalId/analytics', HospitalController.getHospitalAnalytics);
 
 // ================= PHARMACY INVENTORY =================
@@ -128,6 +132,25 @@ router.post(
   authenticateJWT as any,
   authorizeRoles([Role.SUPER_ADMIN, Role.HOSPITAL_ADMIN]) as any,
   InventoryController.updateBloodStock as any
+);
+
+// ================= LABORATORY =================
+router.get(
+  '/lab/requests',
+  authenticateJWT as any,
+  authorizeRoles([Role.LAB_STAFF]) as any,
+  LabController.getLabRequests as any
+);
+router.post(
+  '/lab/results',
+  authenticateJWT as any,
+  authorizeRoles([Role.LAB_STAFF]) as any,
+  LabController.submitLabResult as any
+);
+router.get(
+  '/lab/explain',
+  authenticateJWT as any,
+  LabController.explainResult as any
 );
 
 export default router;
