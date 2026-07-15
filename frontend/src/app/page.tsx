@@ -118,7 +118,7 @@ export default function LandingPage() {
 
             {/* Login Link */}
             <Link 
-              href="/dashboard/patient" 
+              href="/auth" 
               className="px-5 py-2.5 text-sm font-bold bg-teal-700 hover:bg-teal-600 text-white rounded-xl shadow-lg shadow-teal-700/20 transition hover-scale"
             >
               {t('login')}
@@ -154,7 +154,7 @@ export default function LandingPage() {
             </div>
 
             <Link 
-              href="/dashboard/patient" 
+              href="/auth" 
               className="block w-full text-center py-2.5 font-bold bg-teal-700 text-white rounded-xl shadow-lg"
               onClick={() => setMobileMenuOpen(false)}
             >
