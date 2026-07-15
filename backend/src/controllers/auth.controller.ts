@@ -95,6 +95,50 @@ export class AuthController {
             longitude: profileData.longitude || 38.7595,
           },
         });
+      } else if (user.role === Role.HOSPITAL_ADMIN) {
+        // Find first hospital in DB or create a placeholder if none
+        let hospital = await prisma.hospital.findFirst();
+        if (!hospital) {
+          hospital = await prisma.hospital.create({
+            data: {
+              name: 'Tikur Anbessa (Black Lion) Hospital',
+              address: 'Zewditu St',
+              city: 'Addis Ababa',
+              latitude: 9.0182,
+              longitude: 38.7490,
+              contactNumber: '+251115511211'
+            }
+          });
+        }
+        await prisma.hospitalAdminProfile.create({
+          data: {
+            userId: user.id,
+            fullName: name,
+            hospitalId: profileData.hospitalId || hospital.id
+          }
+        });
+      } else if (user.role === Role.NURSE) {
+        let hospital = await prisma.hospital.findFirst();
+        if (!hospital) {
+          hospital = await prisma.hospital.create({
+            data: {
+              name: 'Tikur Anbessa (Black Lion) Hospital',
+              address: 'Zewditu St',
+              city: 'Addis Ababa',
+              latitude: 9.0182,
+              longitude: 38.7490,
+              contactNumber: '+251115511211'
+            }
+          });
+        }
+        await prisma.nurseProfile.create({
+          data: {
+            userId: user.id,
+            fullName: name,
+            department: profileData.department || 'Emergency Room',
+            hospitalId: profileData.hospitalId || hospital.id
+          }
+        });
       }
 
       console.log(`[SMS OTP Notification] Sent to ${phone}: ${otpCode}`);
@@ -166,6 +210,8 @@ export class AuthController {
           pharmacyProfile: true,
           labProfile: true,
           ambulanceDriver: true,
+          hospitalAdmin: true,
+          nurseProfile: true,
         },
       });
 
@@ -208,6 +254,8 @@ export class AuthController {
       else if (user.role === Role.PHARMACY) profile = user.pharmacyProfile;
       else if (user.role === Role.LAB_STAFF) profile = user.labProfile;
       else if (user.role === Role.AMBULANCE_DRIVER) profile = user.ambulanceDriver;
+      else if (user.role === Role.HOSPITAL_ADMIN) profile = user.hospitalAdmin;
+      else if (user.role === Role.NURSE) profile = user.nurseProfile;
 
       res.status(200).json({
         accessToken,
