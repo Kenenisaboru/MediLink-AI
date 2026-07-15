@@ -1,7 +1,7 @@
-'use strict';
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Activity,
   AlertTriangle,
@@ -9,350 +9,294 @@ import {
   Building2,
   CreditCard,
   Droplet,
-  Heart,
-  MapPin,
-  ShieldCheck,
+  Globe,
+  Loader2,
+  LogOut,
   Siren,
   TrendingUp,
   Users,
-  UserPlus,
   Stethoscope,
-  Pill,
-  FlaskConical,
   BarChart3,
-  Globe
+  CheckCircle,
+  ShieldCheck,
 } from 'lucide-react';
+import api from '../../../lib/api';
+import { clearTokens } from '../../../lib/auth';
+import { useAuthGuard } from '../../../hooks/useAuthGuard';
 
+// ── Types ────────────────────────────────────────────────────────────────────
+interface Metrics {
+  patients: number;
+  doctors: number;
+  hospitals: number;
+  totalRevenue: number;
+  emergencyAlerts: number;
+  activeEmergencies: number;
+}
+
+interface Outbreak {
+  disease: string;
+  count: number;
+}
+
+interface Hospital {
+  id: string;
+  name: string;
+  city: string;
+  totalBeds: number;
+  occupiedBeds: number;
+  totalICUBeds: number;
+  occupiedICUBeds: number;
+  queueLength: number;
+  rating: number;
+  isEmergencyAvailable: boolean;
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function StatCard({ icon: Icon, label, value, color, sub }: {
+  icon: React.ElementType;
+  label: string;
+  value: string | number;
+  color: string;
+  sub?: string;
+}) {
+  return (
+    <div className="glass-card rounded-2xl border border-white/20 p-5 flex items-center gap-4 hover-scale">
+      <div className={`w-12 h-12 rounded-2xl bg-${color}-500/10 flex items-center justify-center text-${color}-600 dark:text-${color}-400 shrink-0`}>
+        <Icon className="w-6 h-6" />
+      </div>
+      <div>
+        <div className="text-2xl font-black">{value}</div>
+        <div className="text-xs opacity-60 font-medium">{label}</div>
+        {sub && <div className="text-xs text-teal-600 dark:text-teal-400 font-semibold mt-0.5">{sub}</div>}
+      </div>
+    </div>
+  );
+}
+
+function occupancyColor(pct: number): string {
+  if (pct >= 90) return 'bg-rose-500';
+  if (pct >= 70) return 'bg-amber-500';
+  return 'bg-emerald-500';
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
-  const [metrics, setMetrics] = useState({
-    patients: 2847,
-    doctors: 186,
-    hospitals: 24,
-    totalRevenue: 1_245_800,
-    emergencyAlerts: 312,
-    activeEmergencies: 3,
-  });
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuthGuard();
 
-  const [outbreaks, setOutbreaks] = useState([
-    { disease: 'Malaria (Southern Region)', count: 142, trend: 'rising', severity: 'HIGH' },
-    { disease: 'Cholera (Oromia)', count: 38, trend: 'stable', severity: 'MEDIUM' },
-    { disease: 'Measles (Amhara)', count: 17, trend: 'declining', severity: 'LOW' },
-  ]);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [outbreaks, setOutbreaks] = useState<Outbreak[]>([]);
+  const [hospitals, setHospitals] = useState<Hospital[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [recentUsers, setRecentUsers] = useState([
-    { name: 'Dr. Biruk Tadesse', role: 'DOCTOR', hospital: 'Yekatit 12 Hospital', verified: true },
-    { name: 'Bethlehem Pharmacy', role: 'PHARMACY', hospital: 'Bole Rd, Addis Ababa', verified: false },
-    { name: 'Selam Gebru', role: 'PATIENT', hospital: '—', verified: true },
-    { name: 'Ambulance Unit 07-AA', role: 'AMBULANCE_DRIVER', hospital: 'Addis Ababa Fleet', verified: true },
-  ]);
-
-  const [hospitalPerformance, setHospitalPerformance] = useState([
-    { name: 'Black Lion Hospital', city: 'Addis Ababa', beds: 800, occupied: 720, icu: 45, icuOccupied: 42, queue: 25, rating: 4.5 },
-    { name: 'St. Paul Hospital', city: 'Addis Ababa', beds: 500, occupied: 450, icu: 30, icuOccupied: 28, queue: 18, rating: 4.3 },
-    { name: 'Hawassa Referral', city: 'Hawassa', beds: 400, occupied: 310, icu: 20, icuOccupied: 15, queue: 12, rating: 4.2 },
-    { name: 'Bahir Dar Felege Hiwot', city: 'Bahir Dar', beds: 350, occupied: 280, icu: 18, icuOccupied: 14, queue: 8, rating: 4.4 },
-  ]);
-
-  const formatCurrency = (val: number) => val.toLocaleString('en-US');
-
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'HIGH': return 'bg-red-500/10 text-red-600 border-red-500/20';
-      case 'MEDIUM': return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
-      default: return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
+  const fetchData = useCallback(async () => {
+    setDataLoading(true);
+    try {
+      const [metricsRes, hospitalsRes] = await Promise.all([
+        api.get('/admin/metrics'),
+        api.get('/hospitals'),
+      ]);
+      setMetrics(metricsRes.data.statistics);
+      setOutbreaks(metricsRes.data.outbreaks ?? []);
+      setHospitals(hospitalsRes.data);
+    } catch (err: any) {
+      setError(err.response?.data?.error ?? 'Failed to load admin data.');
+    } finally {
+      setDataLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      // Only allow admin roles
+      if (user.role !== 'SUPER_ADMIN' && user.role !== 'HOSPITAL_ADMIN') {
+        router.replace('/auth');
+        return;
+      }
+      fetchData();
+    }
+  }, [authLoading, user, fetchData, router]);
+
+  const handleLogout = () => {
+    clearTokens();
+    router.push('/auth');
   };
 
-  const getOccupancyColor = (percent: number) => {
-    if (percent >= 90) return 'bg-red-500';
-    if (percent >= 70) return 'bg-amber-500';
-    return 'bg-emerald-500';
-  };
+  if (authLoading || dataLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <Loader2 className="w-10 h-10 text-teal-600 animate-spin mx-auto" />
+          <p className="text-sm opacity-60">Loading admin dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="glass-card rounded-2xl border border-rose-500/20 p-8 text-center space-y-3 max-w-sm">
+          <AlertTriangle className="w-8 h-8 text-rose-500 mx-auto" />
+          <p className="font-bold text-rose-600">{error}</p>
+          <button onClick={() => router.push('/auth')} className="px-6 py-2 bg-teal-700 text-white rounded-xl font-bold text-sm">
+            Back to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 p-4 sm:p-6 lg:p-8 font-sans">
-      
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">Super Admin Console</span>
-          <h1 className="text-3xl font-extrabold tracking-tight mt-1">National Health Analytics</h1>
-          <p className="text-xs opacity-70 mt-1">MediLink AI · Ethiopia Digital Health Transformation Dashboard</p>
-        </div>
-        <div className="flex items-center gap-2 text-xs font-mono opacity-60">
-          <Globe className="w-3.5 h-3.5" />
-          <span>Last sync: {new Date().toLocaleTimeString()}</span>
-        </div>
-      </div>
+    <div className="min-h-screen relative pb-20">
+      <div className="bg-mesh" />
 
-      {/* ================= KPI STAT CARDS ================= */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <div className="p-4 rounded-2xl glass-card border border-white/20 hover-scale">
-          <div className="flex items-center gap-2 mb-2 text-teal-600 dark:text-teal-400">
-            <Users className="w-5 h-5" />
-            <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">Patients</span>
-          </div>
-          <span className="text-2xl font-black">{formatCurrency(metrics.patients)}</span>
-        </div>
-        <div className="p-4 rounded-2xl glass-card border border-white/20 hover-scale">
-          <div className="flex items-center gap-2 mb-2 text-cyan-600 dark:text-cyan-400">
-            <Stethoscope className="w-5 h-5" />
-            <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">Doctors</span>
-          </div>
-          <span className="text-2xl font-black">{metrics.doctors}</span>
-        </div>
-        <div className="p-4 rounded-2xl glass-card border border-white/20 hover-scale">
-          <div className="flex items-center gap-2 mb-2 text-indigo-600 dark:text-indigo-400">
-            <Building2 className="w-5 h-5" />
-            <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">Hospitals</span>
-          </div>
-          <span className="text-2xl font-black">{metrics.hospitals}</span>
-        </div>
-        <div className="p-4 rounded-2xl glass-card border border-white/20 hover-scale">
-          <div className="flex items-center gap-2 mb-2 text-emerald-600 dark:text-emerald-400">
-            <CreditCard className="w-5 h-5" />
-            <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">Revenue (ETB)</span>
-          </div>
-          <span className="text-2xl font-black">{formatCurrency(metrics.totalRevenue)}</span>
-        </div>
-        <div className="p-4 rounded-2xl glass-card border border-white/20 hover-scale">
-          <div className="flex items-center gap-2 mb-2 text-rose-600 dark:text-rose-400">
-            <Siren className="w-5 h-5" />
-            <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">SOS Alerts</span>
-          </div>
-          <span className="text-2xl font-black">{metrics.emergencyAlerts}</span>
-        </div>
-        <div className="p-4 rounded-2xl glass-card border border-white/20 hover-scale">
-          <div className="flex items-center gap-2 mb-2 text-amber-600 dark:text-amber-400">
-            <Activity className="w-5 h-5 animate-pulse" />
-            <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">Active SOS</span>
-          </div>
-          <span className="text-2xl font-black text-rose-500">{metrics.activeEmergencies}</span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-        {/* ================= LEFT COLUMN: Outbreaks + Hospital Performance ================= */}
-        <div className="lg:col-span-8 space-y-6">
-
-          {/* Disease Outbreak Tracker */}
-          <div className="p-6 rounded-2xl glass-card border border-white/20">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-extrabold text-lg flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-amber-500" />
-                AI Disease Outbreak Monitor
-              </h2>
-              <span className="text-[9px] font-bold uppercase bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-full">Sentinel System</span>
+      {/* Nav */}
+      <header className="sticky top-0 z-30 glass-card border-b border-slate-200/20 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-teal-700 flex items-center justify-center">
+              <Activity className="w-5 h-5 text-white" />
             </div>
+            <div>
+              <span className="font-extrabold text-base bg-gradient-to-r from-teal-700 to-cyan-600 bg-clip-text text-transparent">
+                MediLink Admin
+              </span>
+              <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-400 font-bold border border-teal-500/20">
+                {user?.role}
+              </span>
+            </div>
+          </div>
+          <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg hover:bg-rose-500/10 hover:text-rose-600 transition">
+            <LogOut className="w-4 h-4" /> Logout
+          </button>
+        </div>
+      </header>
 
-            <div className="space-y-4">
-              {outbreaks.map((ob, idx) => (
-                <div key={idx} className={`p-4 rounded-xl border ${getSeverityColor(ob.severity)} flex flex-col sm:flex-row sm:items-center justify-between gap-3`}>
-                  <div className="space-y-1">
-                    <h3 className="font-bold text-sm">{ob.disease}</h3>
-                    <p className="text-xs opacity-80 flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3" />
-                      Trend: <strong className="capitalize">{ob.trend}</strong>
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-center">
-                      <span className="text-2xl font-black">{ob.count}</span>
-                      <span className="text-[9px] block opacity-60 uppercase">Cases This Week</span>
+      <main className="max-w-7xl mx-auto px-4 py-8 space-y-10">
+
+        {/* Active Emergencies Banner */}
+        {metrics && metrics.activeEmergencies > 0 && (
+          <div className="flex items-center gap-3 p-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-600">
+            <Siren className="w-5 h-5 animate-pulse" />
+            <span className="font-bold">
+              {metrics.activeEmergencies} active emergency alert{metrics.activeEmergencies > 1 ? 's' : ''} in the system right now.
+            </span>
+          </div>
+        )}
+
+        {/* ── KPI Stats ── */}
+        {metrics && (
+          <section>
+            <h2 className="text-xl font-extrabold mb-5 flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-teal-600" /> National Health Overview
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <StatCard icon={Users} label="Patients" value={metrics.patients.toLocaleString()} color="teal" />
+              <StatCard icon={Stethoscope} label="Doctors" value={metrics.doctors} color="cyan" />
+              <StatCard icon={Building2} label="Hospitals" value={metrics.hospitals} color="blue" />
+              <StatCard icon={CreditCard} label="Revenue (ETB)" value={`${(metrics.totalRevenue / 1000).toFixed(1)}K`} color="emerald" sub="Verified payments" />
+              <StatCard icon={Siren} label="SOS Alerts" value={metrics.emergencyAlerts} color="amber" />
+              <StatCard icon={Activity} label="Active Emergencies" value={metrics.activeEmergencies} color="rose" />
+            </div>
+          </section>
+        )}
+
+        {/* ── Outbreak Monitoring ── */}
+        <section>
+          <h2 className="text-xl font-extrabold mb-5 flex items-center gap-2">
+            <Globe className="w-5 h-5 text-rose-500" /> Epidemic / Outbreak Monitor
+          </h2>
+          {outbreaks.length === 0 ? (
+            <div className="glass-card rounded-2xl border border-white/20 p-8 text-center">
+              <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+              <p className="font-semibold text-emerald-600">No active outbreak indicators detected.</p>
+              <p className="text-xs opacity-60 mt-1">System is scanning medical records for malaria, cholera, measles and dengue patterns.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {outbreaks.map((ob) => {
+                const severity = ob.count > 100 ? 'HIGH' : ob.count > 30 ? 'MEDIUM' : 'LOW';
+                const colorMap = { HIGH: 'rose', MEDIUM: 'amber', LOW: 'teal' };
+                const c = colorMap[severity];
+                return (
+                  <div key={ob.disease} className={`glass-card rounded-2xl border border-${c}-500/20 p-5`}>
+                    <div className={`text-xs font-bold px-2 py-0.5 rounded-full bg-${c}-500/10 text-${c}-600 border border-${c}-500/20 inline-block mb-3`}>
+                      {severity} RISK
                     </div>
-                    <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full border ${getSeverityColor(ob.severity)}`}>
-                      {ob.severity}
-                    </span>
+                    <div className="font-bold text-base">{ob.disease}</div>
+                    <div className={`text-3xl font-black text-${c}-600 mt-1`}>{ob.count} <span className="text-sm font-normal opacity-60">cases</span></div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
+          )}
+        </section>
 
-            {/* Weekly bar chart mockup */}
-            <div className="mt-6 p-4 bg-slate-900/10 dark:bg-black/20 rounded-xl border border-white/5">
-              <div className="text-[10px] font-bold uppercase tracking-wider opacity-60 mb-3">Weekly Regional Case Distribution</div>
-              <div className="h-28 flex items-end justify-between gap-2">
-                {[
-                  { label: 'Addis Ababa', height: 65, color: 'bg-teal-500' },
-                  { label: 'Oromia', height: 85, color: 'bg-amber-500' },
-                  { label: 'Amhara', height: 45, color: 'bg-cyan-500' },
-                  { label: 'SNNPR', height: 95, color: 'bg-rose-500' },
-                  { label: 'Tigray', height: 30, color: 'bg-indigo-500' },
-                  { label: 'Sidama', height: 55, color: 'bg-emerald-500' },
-                  { label: 'Somali', height: 40, color: 'bg-purple-500' },
-                ].map((bar, i) => (
-                  <div key={i} className="flex flex-col items-center w-full group">
-                    <div className="relative w-full">
-                      <div
-                        className={`${bar.color} w-full rounded-t-sm transition-all group-hover:opacity-80`}
-                        style={{ height: `${bar.height}px` }}
-                      />
-                      <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[8px] font-bold opacity-0 group-hover:opacity-100 transition">{bar.height}</span>
+        {/* ── Hospital Capacity ── */}
+        <section>
+          <h2 className="text-xl font-extrabold mb-5 flex items-center gap-2">
+            <Bed className="w-5 h-5 text-blue-500" /> Hospital Capacity Telemetry
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {hospitals.length === 0 ? (
+              <div className="col-span-3 glass-card rounded-2xl border border-white/20 p-8 text-center opacity-60 text-sm">
+                No hospitals found.
+              </div>
+            ) : (
+              hospitals.map((h) => {
+                const bedPct = h.totalBeds > 0 ? Math.round((h.occupiedBeds / h.totalBeds) * 100) : 0;
+                const icuPct = h.totalICUBeds > 0 ? Math.round((h.occupiedICUBeds / h.totalICUBeds) * 100) : 0;
+                return (
+                  <div key={h.id} className="glass-card rounded-2xl border border-white/20 p-5 space-y-4 hover-scale">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-extrabold text-sm leading-tight">{h.name}</div>
+                        <div className="text-xs opacity-60 mt-0.5">{h.city}</div>
+                      </div>
+                      {h.isEmergencyAvailable && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20 shrink-0">
+                          EMERGENCY
+                        </span>
+                      )}
                     </div>
-                    <span className="text-[7px] mt-1 opacity-60 truncate max-w-full">{bar.label}</span>
+
+                    {/* Bed occupancy */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="opacity-60 flex items-center gap-1"><Bed className="w-3 h-3" /> Beds</span>
+                        <span className="font-bold">{h.occupiedBeds}/{h.totalBeds} ({bedPct}%)</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-200/40 dark:bg-slate-700/40 overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${occupancyColor(bedPct)}`} style={{ width: `${bedPct}%` }} />
+                      </div>
+                    </div>
+
+                    {/* ICU occupancy */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="opacity-60 flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> ICU</span>
+                        <span className="font-bold">{h.occupiedICUBeds}/{h.totalICUBeds} ({icuPct}%)</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-200/40 dark:bg-slate-700/40 overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${occupancyColor(icuPct)}`} style={{ width: `${icuPct}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs border-t border-slate-200/20 pt-3">
+                      <span className="opacity-60">Queue: <strong>{h.queueLength} min est.</strong></span>
+                      <span className="opacity-60">★ {h.rating.toFixed(1)}</span>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
+                );
+              })
+            )}
           </div>
+        </section>
 
-          {/* Hospital Performance Matrix */}
-          <div className="p-6 rounded-2xl glass-card border border-white/20">
-            <h2 className="font-extrabold text-lg flex items-center gap-2 mb-6">
-              <BarChart3 className="w-5 h-5 text-teal-600" />
-              Hospital Performance Matrix
-            </h2>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-left border-b border-slate-200/20 text-[10px] uppercase tracking-wider opacity-60">
-                    <th className="pb-3 pr-4">Hospital</th>
-                    <th className="pb-3 pr-4">City</th>
-                    <th className="pb-3 pr-4">Bed Occupancy</th>
-                    <th className="pb-3 pr-4">ICU Status</th>
-                    <th className="pb-3 pr-4">Queue</th>
-                    <th className="pb-3">Rating</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200/10">
-                  {hospitalPerformance.map((h, idx) => {
-                    const bedPercent = Math.round((h.occupied / h.beds) * 100);
-                    const icuPercent = Math.round((h.icuOccupied / h.icu) * 100);
-                    return (
-                      <tr key={idx} className="hover:bg-slate-500/5 transition">
-                        <td className="py-3.5 pr-4 font-semibold">{h.name}</td>
-                        <td className="py-3.5 pr-4 opacity-75 flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {h.city}
-                        </td>
-                        <td className="py-3.5 pr-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-20 h-2 bg-slate-200/30 rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full ${getOccupancyColor(bedPercent)}`} style={{ width: `${bedPercent}%` }} />
-                            </div>
-                            <span className="font-bold">{bedPercent}%</span>
-                          </div>
-                          <span className="text-[9px] opacity-50">{h.occupied}/{h.beds}</span>
-                        </td>
-                        <td className="py-3.5 pr-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-16 h-2 bg-slate-200/30 rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full ${getOccupancyColor(icuPercent)}`} style={{ width: `${icuPercent}%` }} />
-                            </div>
-                            <span className="font-bold">{icuPercent}%</span>
-                          </div>
-                          <span className="text-[9px] opacity-50">{h.icuOccupied}/{h.icu}</span>
-                        </td>
-                        <td className="py-3.5 pr-4">
-                          <span className="font-bold">{h.queue}</span>
-                          <span className="opacity-50"> patients</span>
-                        </td>
-                        <td className="py-3.5">
-                          <span className="font-bold text-amber-500">★ {h.rating}</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        {/* ================= RIGHT COLUMN: User Management + Blood Bank ================= */}
-        <div className="lg:col-span-4 space-y-6">
-
-          {/* Recent user registrations */}
-          <div className="p-6 rounded-2xl glass-card border border-white/20">
-            <h2 className="font-extrabold text-base flex items-center gap-2 mb-4">
-              <UserPlus className="w-5 h-5 text-teal-600" />
-              Recent Registrations
-            </h2>
-
-            <div className="space-y-3">
-              {recentUsers.map((u, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-slate-500/5 border border-slate-200/10 flex items-center justify-between gap-2">
-                  <div className="space-y-0.5 min-w-0">
-                    <h3 className="font-bold text-sm truncate">{u.name}</h3>
-                    <p className="text-[10px] opacity-60 truncate">{u.hospital}</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-500/10">{u.role}</span>
-                    {u.verified ? (
-                      <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                    ) : (
-                      <button className="px-2 py-1 bg-teal-700 hover:bg-teal-600 text-white text-[9px] font-bold rounded transition">Verify</button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Blood Bank Overview */}
-          <div className="p-6 rounded-2xl glass-card border border-rose-500/10">
-            <h2 className="font-extrabold text-base flex items-center gap-2 mb-4">
-              <Droplet className="w-5 h-5 text-rose-500 fill-current" />
-              Blood Bank Overview
-            </h2>
-
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { group: 'A+', bags: 15, status: 'stable' },
-                { group: 'O+', bags: 22, status: 'stable' },
-                { group: 'B-', bags: 5, status: 'critical' },
-                { group: 'AB+', bags: 8, status: 'low' },
-                { group: 'O-', bags: 3, status: 'critical' },
-                { group: 'A-', bags: 11, status: 'stable' },
-              ].map((bs, idx) => (
-                <div key={idx} className={`p-3 rounded-xl border text-center ${
-                  bs.status === 'critical' ? 'bg-red-500/10 border-red-500/20' :
-                  bs.status === 'low' ? 'bg-amber-500/10 border-amber-500/20' :
-                  'bg-slate-500/5 border-slate-200/10'
-                }`}>
-                  <span className="text-lg font-black">{bs.group}</span>
-                  <div className="text-sm font-bold mt-0.5">{bs.bags} bags</div>
-                  <span className={`text-[9px] font-bold uppercase ${
-                    bs.status === 'critical' ? 'text-red-500' :
-                    bs.status === 'low' ? 'text-amber-500' :
-                    'text-emerald-500'
-                  }`}>{bs.status}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick Service Stats */}
-          <div className="p-6 rounded-2xl glass-card border border-white/20">
-            <h2 className="font-extrabold text-base mb-4">Service Providers</h2>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-500/5 border border-slate-200/10">
-                <div className="flex items-center gap-2">
-                  <Pill className="w-4 h-4 text-emerald-500" />
-                  <span className="text-sm font-semibold">Pharmacies</span>
-                </div>
-                <span className="font-black text-base">42</span>
-              </div>
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-500/5 border border-slate-200/10">
-                <div className="flex items-center gap-2">
-                  <FlaskConical className="w-4 h-4 text-cyan-500" />
-                  <span className="text-sm font-semibold">Laboratories</span>
-                </div>
-                <span className="font-black text-base">18</span>
-              </div>
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-500/5 border border-slate-200/10">
-                <div className="flex items-center gap-2">
-                  <Siren className="w-4 h-4 text-rose-500" />
-                  <span className="text-sm font-semibold">Ambulance Units</span>
-                </div>
-                <span className="font-black text-base">14</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      </main>
     </div>
   );
 }
