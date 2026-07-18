@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient, PaymentGateway, PaymentStatus } from '@prisma/client';
+import { PaymentGateway, PaymentStatus } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
-
-const prisma = new PrismaClient();
 
 export class PaymentController {
   // Initiate simulated payment

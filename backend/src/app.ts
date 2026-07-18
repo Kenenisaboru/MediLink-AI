@@ -41,20 +41,21 @@ app.get('/health', (req, res) => {
 });
 
 // Global error handler
-app.use((err: any, req: express.Request, res: express.Response, next: express.Function) => {
+app.use(((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Unhandled Server Error:', err);
   res.status(500).json({ error: 'Internal server error: ' + err.message });
-} as any);
+}) as any);
 
 // Initialize Socket.io SOS tracks
 initSOSGateway(io);
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`===============================================`);
-  console.log(`🚀 MediLink AI Server running on port ${PORT}`);
-  console.log(`📦 Node Env: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`===============================================`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  server.listen(PORT, () => {
+    console.log(`===============================================`);
+    console.log(`🚀 MediLink AI Server running on port ${PORT}`);
+    console.log(`📦 Node Env: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`===============================================`);
+  });
+}
 
 export { app, server };

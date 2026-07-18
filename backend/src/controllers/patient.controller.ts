@@ -1,9 +1,8 @@
 import { Response } from 'express';
-import { PrismaClient, AppointmentStatus, PaymentStatus } from '@prisma/client';
+import { AppointmentStatus, PaymentStatus } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import { AIService } from '../services/ai.service';
-
-const prisma = new PrismaClient();
 
 export class PatientController {
   // Get active Patient profile

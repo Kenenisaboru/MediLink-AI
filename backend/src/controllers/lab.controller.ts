@@ -1,9 +1,7 @@
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import { AIService } from '../services/ai.service';
-
-const prisma = new PrismaClient();
 
 export class LabController {
   // Get all pending or past lab requests

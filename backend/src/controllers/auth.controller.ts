@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
-import { PrismaClient, Role } from '@prisma/client';
+import { Role } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_access_token_key_medilink_ai_2026';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'super_secret_jwt_refresh_token_key_medilink_ai_2026';

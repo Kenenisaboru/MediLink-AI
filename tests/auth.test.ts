@@ -52,6 +52,8 @@ const mockPrisma = {
   },
 };
 
+jest.mock('../backend/src/utils/prisma', () => ({ get prisma() { return mockPrisma; } }));
+
 jest.mock('@prisma/client', () => {
   return {
     PrismaClient: jest.fn().mockImplementation(() => mockPrisma),

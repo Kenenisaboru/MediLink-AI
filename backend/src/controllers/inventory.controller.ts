@@ -1,8 +1,6 @@
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
-
-const prisma = new PrismaClient();
 
 export class InventoryController {
   // Get pharmacy inventory
