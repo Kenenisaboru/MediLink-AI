@@ -49,6 +49,8 @@ app.use(((err: any, req: express.Request, res: express.Response, next: express.N
 // Initialize Socket.io SOS tracks
 initSOSGateway(io);
 
+const PORT = process.env.PORT || 5000;
+
 if (process.env.NODE_ENV !== 'test') {
   server.listen(PORT, () => {
     console.log(`===============================================`);
