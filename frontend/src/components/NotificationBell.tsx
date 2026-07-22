@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, Check, Info, AlertTriangle, Clock } from 'lucide-react';
 import api from '../lib/api';
+import { getAccessToken } from '../lib/auth';
 
 interface NotificationItem {
   id: string;
@@ -15,14 +16,25 @@ interface NotificationItem {
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
+    // Only fetch if user is logged in
+    const token = getAccessToken();
+    if (!token) {
+      setNotifications([]);
+      return;
+    }
+
     try {
       const { data } = await api.get('/notifications');
-      setNotifications(data);
+      if (Array.isArray(data)) {
+        setNotifications(data);
+      } else {
+        setNotifications([]);
+      }
     } catch {
-      // Silent fail if unauthenticated or error
+      // Silent fail if unauthenticated or network error
+      setNotifications([]);
     }
   }, []);
 
@@ -36,14 +48,15 @@ export default function NotificationBell() {
     try {
       await api.put(`/notifications/${id}/read`);
       setNotifications(prev =>
-        prev.map(n => (n.id === id ? { ...n, isRead: true } : n))
+        (Array.isArray(prev) ? prev : []).map(n => (n.id === id ? { ...n, isRead: true } : n))
       );
     } catch {
       // Silent fail
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const safeNotifications = Array.isArray(notifications) ? notifications : [];
+  const unreadCount = safeNotifications.filter(n => !n.isRead).length;
 
   return (
     <div className="relative inline-block text-left">
@@ -61,7 +74,7 @@ export default function NotificationBell() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl glass-card border border-white/20 shadow-2xl z-50 overflow-hidden animate-fadeIn text-xs">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl glass-card-pro border border-white/20 shadow-2xl z-50 overflow-hidden animate-fadeIn text-xs">
           <div className="p-4 border-b border-slate-200/20 flex items-center justify-between bg-white/5">
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4 text-teal-600" />
@@ -75,12 +88,12 @@ export default function NotificationBell() {
           </div>
 
           <div className="max-h-80 overflow-y-auto divide-y divide-slate-200/10">
-            {notifications.length === 0 ? (
+            {safeNotifications.length === 0 ? (
               <div className="p-6 text-center opacity-60 font-medium">
                 No notifications right now.
               </div>
             ) : (
-              notifications.map(item => (
+              safeNotifications.map(item => (
                 <div
                   key={item.id}
                   onClick={() => !item.isRead && markAsRead(item.id)}
