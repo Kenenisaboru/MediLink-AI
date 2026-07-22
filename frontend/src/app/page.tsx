@@ -566,6 +566,91 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ================= FOOTER SECTION ================= */}
+      <footer className="mt-16 border-t border-slate-200/20 bg-slate-900/90 dark:bg-slate-950/90 text-slate-300 pt-16 pb-12 px-4 sm:px-6 lg:px-8 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 text-xs">
+          {/* Col 1: Brand Info */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-500 to-cyan-400 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-teal-500/20">
+                <Activity className="w-6 h-6 text-white animate-pulse" />
+              </div>
+              <span className="text-xl font-black text-white tracking-tight">
+                MediLink <span className="text-teal-400">AI</span>
+              </span>
+            </div>
+            <p className="text-slate-400 leading-relaxed font-medium max-w-sm text-xs">
+              Ethiopia’s Premier Healthcare AI Infrastructure. Bridging clinical triage, real-time hospital bed telemetry, Telebirr payments, and 1-Tap emergency SOS ambulance dispatch.
+            </p>
+            <div className="flex items-center gap-2 text-[11px] font-extrabold text-teal-400">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span>All 12 National Referral Nodes Online</span>
+            </div>
+          </div>
+
+          {/* Col 2: Platform Portals */}
+          <div className="space-y-3">
+            <h4 className="font-extrabold uppercase tracking-wider text-white text-xs">Role Portals</h4>
+            <ul className="space-y-2 font-medium opacity-80 text-xs">
+              <li><Link href="/auth" className="hover:text-teal-400 transition">Patient Workspace</Link></li>
+              <li><Link href="/auth" className="hover:text-teal-400 transition">Doctor Consultation Hub</Link></li>
+              <li><Link href="/auth" className="hover:text-teal-400 transition">Hospital Admin Console</Link></li>
+              <li><Link href="/auth" className="hover:text-teal-400 transition">Laboratory Diagnostics</Link></li>
+              <li><Link href="/auth" className="hover:text-teal-400 transition">Kenema Pharmacy Portal</Link></li>
+              <li><Link href="/auth" className="hover:text-teal-400 transition">Ambulance Dispatch Hub</Link></li>
+            </ul>
+          </div>
+
+          {/* Col 3: Key Innovations */}
+          <div className="space-y-3">
+            <h4 className="font-extrabold uppercase tracking-wider text-white text-xs">Core Features</h4>
+            <ul className="space-y-2 font-medium opacity-80 text-xs">
+              <li><a href="#features-section" className="hover:text-teal-400 transition">Multilingual AI Triage</a></li>
+              <li><a href="#hospitals-section" className="hover:text-teal-400 transition">Live Bed & ICU Counters</a></li>
+              <li><a href="#blood-section" className="hover:text-teal-400 transition">National Blood Bank Ticker</a></li>
+              <li><a href="#" className="hover:text-teal-400 transition">Telebirr & Chapa Payments</a></li>
+              <li><a href="#" className="hover:text-teal-400 transition">Encrypted Telemedicine</a></li>
+            </ul>
+          </div>
+
+          {/* Col 4: Emergency Contacts */}
+          <div className="space-y-3">
+            <h4 className="font-extrabold uppercase tracking-wider text-rose-400 text-xs flex items-center gap-1.5">
+              <Phone className="w-3.5 h-3.5" /> Emergency Hotlines
+            </h4>
+            <div className="space-y-2 font-medium text-xs text-slate-300">
+              <div className="p-2.5 rounded-xl bg-slate-800/80 border border-rose-500/20 flex justify-between items-center">
+                <span>National Health Hotline</span>
+                <strong className="text-rose-400 font-extrabold">907</strong>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-800/80 border border-rose-500/20 flex justify-between items-center">
+                <span>Ambulance Emergency</span>
+                <strong className="text-rose-400 font-extrabold">911</strong>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-800/80 border border-rose-500/20 flex justify-between items-center">
+                <span>Tikur Anbessa ER</span>
+                <strong className="text-rose-400 font-extrabold">+251 11 551 1211</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom copyright sub-bar */}
+        <div className="max-w-7xl mx-auto mt-12 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] opacity-60 font-medium">
+          <div>
+            © 2026 MediLink AI. Built with pride for Ethiopia 🇪🇹
+          </div>
+          <div className="flex items-center gap-6">
+            <a href="#" className="hover:underline">Privacy Policy</a>
+            <a href="#" className="hover:underline">Terms of Service</a>
+            <a href="#" className="hover:underline">Clinical AI Safety Disclaimers</a>
+          </div>
+        </div>
+      </footer>
+
       {/* Modals */}
       {symptomModalOpen && (
         <SymptomCheckerModal isOpen={symptomModalOpen} onClose={() => setSymptomModalOpen(false)} />
