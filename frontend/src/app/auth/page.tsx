@@ -75,7 +75,7 @@ function OTPInput({
   };
 
   return (
-    <div className="flex gap-3 justify-center" onPaste={handlePaste}>
+    <div className="flex gap-1.5 sm:gap-3 justify-center" onPaste={handlePaste}>
       {digits.map((d, i) => (
         <input
           key={i}
@@ -86,7 +86,7 @@ function OTPInput({
           value={d}
           onChange={(e) => handleChange(i, e)}
           onKeyDown={(e) => handleKey(i, e)}
-          className="w-12 h-14 text-center text-xl font-bold rounded-xl border-2 border-slate-200/60 dark:border-slate-700 bg-white/40 dark:bg-slate-800/40 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition"
+          className="w-10 sm:w-12 h-12 sm:h-14 text-center text-lg sm:text-xl font-bold rounded-xl border-2 border-slate-200/60 dark:border-slate-700 bg-white/40 dark:bg-slate-800/40 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition"
         />
       ))}
     </div>
