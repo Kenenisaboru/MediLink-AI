@@ -3,8 +3,8 @@
 
 import React, { useState } from 'react';
 import { useLanguage } from './LanguageContext';
-import { Activity, AlertTriangle, X, ShieldAlert, Sparkles } from 'lucide-react';
-import axios from 'axios';
+import { Activity, AlertTriangle, X, ShieldAlert, Sparkles, Loader2, ArrowRight } from 'lucide-react';
+import api from '../lib/api';
 
 interface SymptomCheckerModalProps {
   isOpen: boolean;
@@ -27,8 +27,7 @@ export const SymptomCheckerModal: React.FC<SymptomCheckerModalProps> = ({ isOpen
     setResult(null);
 
     try {
-      // Direct call to local express server (default localhost:5000 in dev)
-      const res = await axios.post('http://localhost:5000/api/patient/symptom-check', {
+      const res = await api.post('/patient/symptom-check', {
         symptoms,
         language: language === 'am' ? 'Amharic' : language === 'om' ? 'Afaan Oromo' : 'English',
       });
@@ -77,110 +76,84 @@ export const SymptomCheckerModal: React.FC<SymptomCheckerModalProps> = ({ isOpen
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-lg overflow-hidden rounded-2xl glass-card border border-white/20 p-6 flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-lg overflow-hidden rounded-3xl glass-card-pro border border-white/20 p-6 flex flex-col max-h-[90vh] shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200/30 pb-4 mb-4">
+        <div className="flex items-center justify-between border-b border-slate-200/20 pb-4 mb-4">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-teal-600 dark:text-teal-400 animate-pulse" />
-            <h2 className="text-xl font-bold font-sans">{t('symptomCheckerBtn')}</h2>
+            <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center text-teal-600">
+              <Sparkles className="w-5 h-5 animate-pulse" />
+            </div>
+            <h2 className="text-lg font-black tracking-tight">{t('symptomCheckerBtn')}</h2>
           </div>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-slate-200/30 transition">
+          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-200/30 transition text-slate-500">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form Body */}
         <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-          <div className="text-sm opacity-80 mb-2">
+          <div className="text-xs opacity-75 mb-2 font-medium leading-relaxed">
             Write down your current physical symptoms (e.g. fever, headache, dry cough) in <strong>English, Amharic (አማርኛ), or Afaan Oromo</strong>.
           </div>
 
           <textarea
-            className="w-full h-32 p-3 text-sm rounded-xl border border-slate-200/50 bg-white/20 dark:bg-slate-800/40 focus:outline-none focus:ring-2 focus:ring-teal-600 resize-none font-sans"
+            className="w-full h-32 p-3 text-xs rounded-xl border border-slate-200/40 bg-white/20 dark:bg-slate-800/40 focus:outline-none focus:ring-2 focus:ring-teal-700 resize-none font-medium"
             placeholder={language === 'am' ? 'ለምሳሌ: ትኩሳት እና ሳል አለኝ...' : language === 'om' ? 'Fakkeenyaaf: Ho’aa fi qufaa qaba...' : 'Describe your symptoms...'}
             value={symptoms}
             onChange={(e) => setSymptoms(e.target.value)}
-            disabled={loading}
           />
 
           <button
             onClick={handleAnalyze}
             disabled={loading || !symptoms.trim()}
-            className="w-full py-3 bg-teal-700 hover:bg-teal-600 disabled:bg-slate-400 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition hover-scale"
+            className="w-full py-3 bg-teal-700 hover:bg-teal-600 disabled:bg-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 text-white font-extrabold rounded-xl shadow-lg flex items-center justify-center gap-2 transition hover-scale text-xs uppercase tracking-wider"
           >
             {loading ? (
               <>
-                <Activity className="w-5 h-5 animate-spin" />
-                Analyzing with Gemini...
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Analyzing Triage Status...
               </>
             ) : (
-              'Analyze Symptoms'
+              <>
+                <Activity className="w-4 h-4" />
+                Analyze Health Symptoms
+              </>
             )}
           </button>
 
-          {/* Loader skeleton */}
-          {loading && (
-            <div className="space-y-3 mt-4">
-              <div className="h-6 w-2/3 skeleton rounded"></div>
-              <div className="h-4 w-full skeleton rounded"></div>
-              <div className="h-20 w-full skeleton rounded"></div>
-            </div>
-          )}
-
-          {/* Error Message banner */}
-          {error && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 rounded-xl text-xs flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* Response Panel */}
+          {/* Results Display */}
           {result && (
-            <div className="space-y-4 mt-4 p-4 rounded-xl bg-slate-500/5 border border-slate-200/20 animate-slideUp">
-              {/* Urgency Badge */}
-              <div className={`p-3 rounded-lg border flex items-center gap-2 text-sm font-semibold ${getUrgencyColor(result.urgencyLevel)}`}>
-                <ShieldAlert className="w-5 h-5 shrink-0" />
-                <span>Urgency level: {result.urgencyLevel}</span>
+            <div className="space-y-4 border-t border-slate-200/20 pt-4 animate-fadeIn">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] uppercase tracking-wider opacity-60 font-bold">Triage Verdict</span>
+                <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black border uppercase ${getUrgencyColor(result.urgencyLevel)}`}>
+                  {result.urgencyLevel}
+                </span>
               </div>
 
-              {/* Conditions estimated */}
-              <div>
-                <h4 className="text-xs uppercase font-bold tracking-wider opacity-60 mb-1">Possible Conditions:</h4>
-                <ul className="list-disc pl-4 text-sm font-medium space-y-1">
-                  {result.conditions?.map((cond: string, idx: number) => (
-                    <li key={idx}>{cond}</li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Departments recommended */}
-              {result.recommendedDepartment && (
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2 rounded bg-slate-500/5">
-                    <span className="opacity-60 block">Department:</span>
-                    <strong className="text-sm text-teal-600 dark:text-teal-400">{result.recommendedDepartment}</strong>
-                  </div>
-                  {result.specialistType && (
-                    <div className="p-2 rounded bg-slate-500/5">
-                      <span className="opacity-60 block">Specialist:</span>
-                      <strong className="text-sm text-teal-600 dark:text-teal-400">{result.specialistType}</strong>
-                    </div>
-                  )}
+              <div className="p-4 rounded-xl bg-white/30 dark:bg-slate-850/40 border border-white/20 space-y-2 text-xs">
+                <div>
+                  <span className="opacity-60 block font-bold text-[10px]">Identified Conditions</span>
+                  <span className="font-extrabold text-sm text-slate-800 dark:text-slate-200">
+                    {result.conditions?.join(', ') || 'General Symptoms'}
+                  </span>
                 </div>
-              )}
+                <div>
+                  <span className="opacity-60 block font-bold text-[10px]">Home Care Advice</span>
+                  <p className="font-medium opacity-90 leading-relaxed">{result.advice}</p>
+                </div>
+                <div>
+                  <span className="opacity-60 block font-bold text-[10px]">Recommended Specialist</span>
+                  <span className="font-black text-teal-600 dark:text-teal-400">{result.recommendedDepartment}</span>
+                </div>
+              </div>
 
-              {/* Advice */}
-              <div className="p-3 rounded-lg bg-teal-500/5 text-sm italic font-sans">
-                &ldquo;{result.advice}&rdquo;
+              <div className="flex gap-2 p-3 bg-rose-500/5 rounded-xl border border-rose-500/10 text-[10px] text-rose-600 leading-normal font-semibold">
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <p>{result.disclaimer}</p>
               </div>
             </div>
           )}
-        </div>
-
-        {/* Disclaimer footer */}
-        <div className="mt-4 pt-3 border-t border-slate-200/30 text-[10px] text-slate-500 text-center leading-relaxed">
-          {t('aiDisclaimer')}
         </div>
       </div>
     </div>
