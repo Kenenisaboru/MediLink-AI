@@ -22,7 +22,8 @@ export const SOSWidget: React.FC<SOSWidgetProps> = ({ patientId }) => {
 
   useEffect(() => {
     // Connect to backend Socket.io server
-    const newSocket = io('http://localhost:5000');
+    const socketHost = typeof window !== 'undefined' ? `http://${window.location.hostname}:5000` : 'http://localhost:5000';
+    const newSocket = io(socketHost);
     setSocket(newSocket);
     addLog('Connected to SOS Gateway WebSocket.');
 
