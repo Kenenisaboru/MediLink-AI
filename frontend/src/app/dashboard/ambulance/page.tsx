@@ -50,7 +50,8 @@ export default function AmbulanceDashboard() {
   useEffect(() => {
     if (authLoading || !user) return;
 
-    const newSocket = io('http://localhost:5000');
+    const socketHost = typeof window !== 'undefined' ? `http://${window.location.hostname}:5000` : 'http://localhost:5000';
+    const newSocket = io(socketHost);
     setSocket(newSocket);
     addLog('Connected to Socket.io Real-time Emergency Dispatch Gateway.');
 
