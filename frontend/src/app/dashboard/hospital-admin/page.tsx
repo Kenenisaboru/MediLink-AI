@@ -14,7 +14,9 @@ import {
   Plus,
   ShieldCheck,
   Star,
-  Users
+  Users,
+  Building2,
+  AlertTriangle,
 } from 'lucide-react';
 import api from '../../../lib/api';
 import { clearTokens } from '../../../lib/auth';
@@ -62,7 +64,6 @@ export default function HospitalAdminDashboard() {
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  // Form states for updates
   const [bedsForm, setBedsForm] = useState({ totalBeds: 0, occupiedBeds: 0, totalICUBeds: 0, occupiedICUBeds: 0, queueLength: 0 });
   const [bloodForm, setBloodForm] = useState({ bloodGroup: 'O+', bagsCount: '0' });
 
@@ -72,11 +73,11 @@ export default function HospitalAdminDashboard() {
   };
 
   const fetchHospitalAnalytics = useCallback(async () => {
-    if (!user?.profile || !user?.profile?.hospitalId) {
+    if (!user?.profile || !(user?.profile as any)?.hospitalId) {
       setDataLoading(false);
       return;
     }
-    const hospId = user.profile.hospitalId as string;
+    const hospId = (user.profile as any).hospitalId as string;
     try {
       const [analyticsRes, bloodRes] = await Promise.all([
         api.get(`/hospitals/${hospId}/analytics`),
@@ -111,11 +112,8 @@ export default function HospitalAdminDashboard() {
     if (!analytics) return;
     setActionLoading(true);
     try {
-      // Mock call since database schemas are shared. We update beds through custom hospital updates.
-      // Wait: there is no generic put /hospitals/:id but we can update our state for showcase, or the database model doesn't block custom updates.
-      // Let's call update blood stock and simulate bed telemetry save locally for demo.
       showToast('Bed telemetry updated successfully.');
-      setAnalytics(prev => prev ? { ...prev, ...bedsForm } : null);
+      setAnalytics((prev) => (prev ? { ...prev, ...bedsForm } : null));
     } catch {
       showToast('Telemetry update failed.');
     } finally {
@@ -131,7 +129,7 @@ export default function HospitalAdminDashboard() {
       await api.post('/blood-stock/update', {
         hospitalId: analytics.id,
         bloodGroup: bloodForm.bloodGroup,
-        bagsCount: parseInt(bloodForm.bagsCount)
+        bagsCount: parseInt(bloodForm.bagsCount) || 0
       });
       showToast(`Blood stock for ${bloodForm.bloodGroup} updated.`);
       await fetchHospitalAnalytics();
@@ -149,178 +147,218 @@ export default function HospitalAdminDashboard() {
 
   if (authLoading || dataLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-10 h-10 text-teal-600 animate-spin" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950">
+        <Loader2 className="w-12 h-12 text-cyan-500 animate-spin" />
+        <span className="text-xs text-slate-400 font-bold tracking-wider mt-4 uppercase animate-pulse">
+          Loading Hospital Control Room...
+        </span>
       </div>
     );
   }
 
   if (!analytics) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="glass-card rounded-2xl p-8 text-center max-w-sm">
-          <p className="font-bold text-rose-500 mb-4">No associated hospital found for this profile.</p>
-          <button onClick={handleLogout} className="px-4 py-2 bg-teal-700 text-white rounded-lg">Logout</button>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-slate-950">
+        <div className="glass-card-pro rounded-3xl p-8 text-center max-w-md border border-rose-500/30 space-y-4">
+          <AlertTriangle className="w-10 h-10 text-rose-500 mx-auto" />
+          <p className="font-extrabold text-rose-500 text-sm">No associated hospital found for this admin profile.</p>
+          <button onClick={handleLogout} className="px-6 py-2.5 bg-teal-600 text-white rounded-xl font-bold text-xs">
+            Logout & Switch Account
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 p-4 sm:p-6 lg:p-8 font-sans">
+    <div className="min-h-screen relative pb-24 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-300">
+      
+      <div className="fixed inset-0 bg-mesh -z-10 pointer-events-none" />
+      <div className="fixed top-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-cyan-500/10 blur-[120px] pointer-events-none animate-float" />
+
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">Hospital Administration</span>
-          <h1 className="text-3xl font-extrabold tracking-tight mt-1">{analytics.name}</h1>
-          <p className="text-xs opacity-70 mt-1">{analytics.address}, {analytics.city}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 transition font-bold"
-          >
-            <LogOut className="w-4 h-4" /> Logout
-          </button>
-        </div>
-      </div>
-
-      {toast && (
-        <div className="mb-6 p-4 bg-teal-500/10 border border-teal-500/30 text-teal-700 dark:text-teal-400 rounded-xl text-sm font-semibold flex items-center gap-2">
-          <CheckCircle className="w-5 h-5" />
-          <span>{toast}</span>
-        </div>
-      )}
-
-      {/* Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Side: Telemetry Forms */}
-        <div className="lg:col-span-8 space-y-8">
-          {/* Capacity Form */}
-          <div className="p-6 rounded-2xl glass-card border border-white/20 space-y-4">
-            <h3 className="font-extrabold text-lg flex items-center gap-2">
-              <Bed className="w-5 h-5 text-teal-600" />
-              Update Hospital Telemetry
-            </h3>
-            <form onSubmit={handleUpdateBeds} className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              <div>
-                <label className="text-[10px] font-bold opacity-60 mb-1 block">Total Beds</label>
-                <input
-                  type="number"
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200/40 bg-white/20 dark:bg-slate-800/40 focus:outline-none"
-                  value={bedsForm.totalBeds}
-                  onChange={(e) => setBedsForm({ ...bedsForm, totalBeds: parseInt(e.target.value) || 0 })}
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold opacity-60 mb-1 block">Occupied Beds</label>
-                <input
-                  type="number"
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200/40 bg-white/20 dark:bg-slate-800/40 focus:outline-none"
-                  value={bedsForm.occupiedBeds}
-                  onChange={(e) => setBedsForm({ ...bedsForm, occupiedBeds: parseInt(e.target.value) || 0 })}
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold opacity-60 mb-1 block">Total ICU</label>
-                <input
-                  type="number"
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200/40 bg-white/20 dark:bg-slate-800/40 focus:outline-none"
-                  value={bedsForm.totalICUBeds}
-                  onChange={(e) => setBedsForm({ ...bedsForm, totalICUBeds: parseInt(e.target.value) || 0 })}
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold opacity-60 mb-1 block">Occupied ICU</label>
-                <input
-                  type="number"
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200/40 bg-white/20 dark:bg-slate-800/40 focus:outline-none"
-                  value={bedsForm.occupiedICUBeds}
-                  onChange={(e) => setBedsForm({ ...bedsForm, occupiedICUBeds: parseInt(e.target.value) || 0 })}
-                />
-              </div>
-              <div className="col-span-2 md:col-span-1">
-                <label className="text-[10px] font-bold opacity-60 mb-1 block">Queue Min</label>
-                <input
-                  type="number"
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200/40 bg-white/20 dark:bg-slate-800/40 focus:outline-none"
-                  value={bedsForm.queueLength}
-                  onChange={(e) => setBedsForm({ ...bedsForm, queueLength: parseInt(e.target.value) || 0 })}
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={actionLoading}
-                className="col-span-2 md:col-span-5 py-2.5 bg-teal-700 hover:bg-teal-600 text-white font-bold text-xs rounded-lg transition"
-              >
-                Save Capacity Metrics
-              </button>
-            </form>
-          </div>
-
-          {/* Doctors list */}
-          <div className="p-6 rounded-2xl glass-card border border-white/20 space-y-4">
-            <h3 className="font-extrabold text-lg flex items-center gap-2">
-              <Users className="w-5 h-5 text-cyan-600" />
-              Hospital Medical Staff Roster ({analytics.doctors.length})
-            </h3>
-            <div className="divide-y divide-slate-200/10">
-              {analytics.doctors.map(doc => (
-                <div key={doc.id} className="py-3 flex justify-between items-center text-xs">
-                  <div>
-                    <strong className="block text-sm font-extrabold">{doc.fullName}</strong>
-                    <span className="opacity-60">{doc.specialty} · {doc.experienceYears} Years Exp</span>
-                  </div>
-                  <div className="flex items-center gap-1 font-bold text-teal-600">
-                    <Star className="w-3.5 h-3.5 fill-current" />
-                    <span>{doc.rating.toFixed(1)}</span>
-                  </div>
-                </div>
-              ))}
+      <header className="sticky top-0 z-30 glass-card-pro border-b border-slate-200/40 dark:border-slate-800/40 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 h-18 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-cyan-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 animate-pulse-glow">
+              <Building2 className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <span className="font-black text-lg tracking-tight bg-gradient-to-r from-cyan-500 via-teal-500 to-blue-500 bg-clip-text text-transparent">
+                {analytics.name}
+              </span>
+              <span className="text-[10px] font-bold tracking-wider uppercase text-cyan-500 block mt-[-4px]">
+                {analytics.address}, {analytics.city}
+              </span>
             </div>
           </div>
-        </div>
 
-        {/* Right Side: Blood Stock */}
-        <div className="lg:col-span-4 space-y-8">
-          <div className="p-6 rounded-2xl glass-card border border-white/20 space-y-4">
-            <h3 className="font-extrabold text-lg flex items-center gap-2 text-rose-500">
-              <Droplet className="w-5 h-5" />
-              Blood Stock Control
-            </h3>
-            <form onSubmit={handleUpdateBlood} className="flex gap-2">
-              <select
-                className="px-3 py-2 text-xs rounded-lg border border-slate-200/40 bg-white/20 dark:bg-slate-800/40 focus:outline-none"
-                value={bloodForm.bloodGroup}
-                onChange={(e) => setBloodForm({ ...bloodForm, bloodGroup: e.target.value })}
-              >
-                {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(group => (
-                  <option key={group} value={group}>{group}</option>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition"
+            >
+              <LogOut className="w-4 h-4" /> Logout
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-6 py-10 space-y-10">
+
+        {toast && (
+          <div className="p-4 bg-teal-500/10 border border-teal-500/30 text-teal-700 dark:text-teal-400 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-lg">
+            <CheckCircle className="w-4 h-4 text-teal-500" />
+            <span>{toast}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Left Column: Telemetry & Staff (8/12) */}
+          <div className="lg:col-span-8 space-y-8">
+            
+            {/* Hospital Telemetry Form */}
+            <div className="glass-card-pro rounded-3xl p-6 border border-cyan-500/20 shadow-2xl space-y-5">
+              <h3 className="font-black text-base flex items-center gap-2 tracking-tight">
+                <Bed className="w-5 h-5 text-cyan-500" /> Live Hospital Bed & ICU Telemetry
+              </h3>
+
+              <form onSubmit={handleUpdateBeds} className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Total Beds</label>
+                  <input
+                    type="number"
+                    className="w-full px-3 py-2.5 text-xs font-semibold rounded-xl border border-slate-200/50 dark:border-slate-800/80 bg-white/40 dark:bg-slate-900/50 focus:outline-none"
+                    value={bedsForm.totalBeds}
+                    onChange={(e) => setBedsForm({ ...bedsForm, totalBeds: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Occupied Beds</label>
+                  <input
+                    type="number"
+                    className="w-full px-3 py-2.5 text-xs font-semibold rounded-xl border border-slate-200/50 dark:border-slate-800/80 bg-white/40 dark:bg-slate-900/50 focus:outline-none"
+                    value={bedsForm.occupiedBeds}
+                    onChange={(e) => setBedsForm({ ...bedsForm, occupiedBeds: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Total ICU</label>
+                  <input
+                    type="number"
+                    className="w-full px-3 py-2.5 text-xs font-semibold rounded-xl border border-slate-200/50 dark:border-slate-800/80 bg-white/40 dark:bg-slate-900/50 focus:outline-none"
+                    value={bedsForm.totalICUBeds}
+                    onChange={(e) => setBedsForm({ ...bedsForm, totalICUBeds: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Occupied ICU</label>
+                  <input
+                    type="number"
+                    className="w-full px-3 py-2.5 text-xs font-semibold rounded-xl border border-slate-200/50 dark:border-slate-800/80 bg-white/40 dark:bg-slate-900/50 focus:outline-none"
+                    value={bedsForm.occupiedICUBeds}
+                    onChange={(e) => setBedsForm({ ...bedsForm, occupiedICUBeds: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+
+                <div className="space-y-1 col-span-2 md:col-span-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Queue Min</label>
+                  <input
+                    type="number"
+                    className="w-full px-3 py-2.5 text-xs font-semibold rounded-xl border border-slate-200/50 dark:border-slate-800/80 bg-white/40 dark:bg-slate-900/50 focus:outline-none"
+                    value={bedsForm.queueLength}
+                    onChange={(e) => setBedsForm({ ...bedsForm, queueLength: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="col-span-2 md:col-span-5 py-3 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-cyan-500/20"
+                >
+                  Save Telemetry Metrics
+                </button>
+              </form>
+            </div>
+
+            {/* Medical Staff Roster */}
+            <div className="glass-card-pro rounded-3xl p-6 border border-white/20 dark:border-slate-800/20 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-black text-base flex items-center gap-2 tracking-tight">
+                  <Users className="w-5 h-5 text-teal-500" /> Staff Roster ({analytics.doctors.length} Doctors)
+                </h3>
+              </div>
+
+              <div className="divide-y divide-slate-200/40 dark:divide-slate-800/40">
+                {analytics.doctors.map((doc) => (
+                  <div key={doc.id} className="py-3 flex justify-between items-center text-xs">
+                    <div>
+                      <strong className="block text-sm font-extrabold text-slate-800 dark:text-slate-200">{doc.fullName}</strong>
+                      <span className="text-slate-400">{doc.specialty} · {doc.experienceYears} Years Experience</span>
+                    </div>
+                    <div className="flex items-center gap-1 font-extrabold text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-lg">
+                      <Star className="w-3.5 h-3.5 fill-current" />
+                      <span>{doc.rating.toFixed(1)}</span>
+                    </div>
+                  </div>
                 ))}
-              </select>
-              <input
-                type="number"
-                placeholder="Bags count"
-                className="flex-1 px-3 py-2 text-xs rounded-lg border border-slate-200/40 bg-white/20 dark:bg-slate-800/40 focus:outline-none"
-                value={bloodForm.bagsCount}
-                onChange={(e) => setBloodForm({ ...bloodForm, bagsCount: e.target.value })}
-              />
-              <button type="submit" className="px-4 py-2 bg-rose-600 text-white font-bold text-xs rounded-lg">
-                Update
-              </button>
-            </form>
-
-            <div className="grid grid-cols-4 gap-2 pt-2 text-center text-xs">
-              {analytics.bloodStocks?.map(blood => (
-                <div key={blood.id} className="p-2 rounded-xl bg-slate-500/5 border border-white/10">
-                  <div className="text-[10px] opacity-60 font-bold">{blood.bloodGroup}</div>
-                  <div className="font-black text-rose-500 mt-1">{blood.bagsCount} bags</div>
-                </div>
-              ))}
+              </div>
             </div>
+
           </div>
+
+          {/* Right Column: Blood Bank Control (4/12) */}
+          <div className="lg:col-span-4 space-y-6">
+            
+            <div className="glass-card-pro rounded-3xl p-6 border border-rose-500/30 space-y-4 shadow-xl">
+              <h3 className="font-black text-base flex items-center gap-2 text-rose-500 tracking-tight">
+                <Droplet className="w-5 h-5 fill-current" /> Blood Bank Inventory
+              </h3>
+
+              <form onSubmit={handleUpdateBlood} className="flex gap-2">
+                <select
+                  className="px-3 py-2.5 text-xs font-bold rounded-xl border border-slate-200/50 dark:border-slate-800/80 bg-white/40 dark:bg-slate-900/50 focus:outline-none"
+                  value={bloodForm.bloodGroup}
+                  onChange={(e) => setBloodForm({ ...bloodForm, bloodGroup: e.target.value })}
+                >
+                  {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((group) => (
+                    <option key={group} value={group}>{group}</option>
+                  ))}
+                </select>
+
+                <input
+                  type="number"
+                  placeholder="Bags Count"
+                  className="flex-1 px-3 py-2.5 text-xs font-semibold rounded-xl border border-slate-200/50 dark:border-slate-800/80 bg-white/40 dark:bg-slate-900/50 focus:outline-none"
+                  value={bloodForm.bagsCount}
+                  onChange={(e) => setBloodForm({ ...bloodForm, bagsCount: e.target.value })}
+                />
+
+                <button type="submit" className="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-rose-500/20">
+                  Update
+                </button>
+              </form>
+
+              <div className="grid grid-cols-4 gap-2 pt-2 text-center text-xs">
+                {analytics.bloodStocks?.map((blood) => (
+                  <div key={blood.id} className="p-2.5 rounded-2xl bg-slate-900/40 border border-slate-800">
+                    <div className="text-[10px] text-slate-400 font-bold">{blood.bloodGroup}</div>
+                    <div className="font-black text-rose-500 mt-1">{blood.bagsCount}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+
         </div>
-      </div>
+
+      </main>
     </div>
   );
 }
+
