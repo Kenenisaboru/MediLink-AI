@@ -52,9 +52,9 @@ initSOSGateway(io);
 const PORT = process.env.PORT || 5000;
 
 if (process.env.NODE_ENV !== 'test') {
-  server.listen(PORT, () => {
+  server.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`===============================================`);
-    console.log(`🚀 MediLink AI Server running on port ${PORT}`);
+    console.log(`🚀 MediLink AI Server running on port ${PORT} (0.0.0.0)`);
     console.log(`📦 Node Env: ${process.env.NODE_ENV || 'development'}`);
     console.log(`===============================================`);
   });
