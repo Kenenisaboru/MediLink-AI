@@ -7,6 +7,7 @@ import { PaymentController } from '../controllers/payment.controller';
 import { HospitalController } from '../controllers/hospital.controller';
 import { InventoryController } from '../controllers/inventory.controller';
 import { LabController } from '../controllers/lab.controller';
+import { NotificationController } from '../controllers/notification.controller';
 import { authenticateJWT, authorizeRoles } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -151,6 +152,18 @@ router.get(
   '/lab/explain',
   authenticateJWT as any,
   LabController.explainResult as any
+);
+
+// ================= NOTIFICATIONS =================
+router.get(
+  '/notifications',
+  authenticateJWT as any,
+  NotificationController.getNotifications as any
+);
+router.put(
+  '/notifications/:id/read',
+  authenticateJWT as any,
+  NotificationController.markAsRead as any
 );
 
 export default router;
