@@ -1,10 +1,12 @@
 'use strict';
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../components/LanguageContext';
 import { SymptomCheckerModal } from '../components/SymptomCheckerModal';
 import { SOSWidget } from '../components/SOSWidget';
+import NotificationBell from '../components/NotificationBell';
+import api from '../lib/api';
 import { 
   Activity, 
   Bed, 
@@ -19,7 +21,15 @@ import {
   Menu, 
   X,
   CreditCard,
-  Droplet
+  Droplet,
+  CheckCircle,
+  Siren,
+  Clock,
+  ArrowRight,
+  Stethoscope,
+  Building2,
+  HeartPulse,
+  Award
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -28,89 +38,141 @@ export default function LandingPage() {
   const [symptomModalOpen, setSymptomModalOpen] = useState(false);
   const [sosPanelOpen, setSosPanelOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeFeatureTab, setActiveFeatureTab] = useState<'AI' | 'TELEMETRY' | 'SOS' | 'PAYMENTS'>('AI');
 
-  // Search filter hooks (mocking UI lookups)
   const [hospQuery, setHospQuery] = useState('');
+  const [hospitals, setHospitals] = useState<any[]>([]);
 
-  const mockHospitals = [
+  const defaultHospitals = [
     {
+      id: 'hosp-1',
       name: 'Black Lion (Tikur Anbessa) Hospital',
       city: 'Addis Ababa',
-      beds: '720/800 occupied',
-      icu: '42/45 occupied',
-      queue: '45 mins est.',
-      emergency: true,
-      color: 'border-red-500/20'
+      address: 'Zewditu St, Addis Ababa',
+      occupiedBeds: 720,
+      totalBeds: 800,
+      occupiedICUBeds: 42,
+      totalICUBeds: 45,
+      queueLength: 45,
+      isEmergencyAvailable: true,
+      rating: 4.9
     },
     {
-      name: 'St. Paul specialized Hospital',
+      id: 'hosp-2',
+      name: 'St. Paul Specialized Hospital',
       city: 'Addis Ababa',
-      beds: '450/500 occupied',
-      icu: '28/30 occupied',
-      queue: '30 mins est.',
-      emergency: true,
-      color: 'border-red-500/20'
+      address: 'Swaziland St, Gulele, Addis Ababa',
+      occupiedBeds: 450,
+      totalBeds: 500,
+      occupiedICUBeds: 28,
+      totalICUBeds: 30,
+      queueLength: 30,
+      isEmergencyAvailable: true,
+      rating: 4.8
     },
     {
-      name: 'Hawassa Referral Hospital',
+      id: 'hosp-3',
+      name: 'Hawassa Comprehensive Referral Hospital',
       city: 'Hawassa',
-      beds: '310/400 occupied',
-      icu: '15/20 occupied',
-      queue: '15 mins est.',
-      emergency: true,
-      color: 'border-teal-500/20'
+      address: 'Near Hawassa University Main Campus',
+      occupiedBeds: 310,
+      totalBeds: 400,
+      occupiedICUBeds: 15,
+      totalICUBeds: 20,
+      queueLength: 15,
+      isEmergencyAvailable: true,
+      rating: 4.7
     }
   ];
 
-  const filteredHospitals = mockHospitals.filter(h => 
+  const bloodStocksList = [
+    { hospital: 'Addis Ababa Central Bank', group: 'O-', count: 14, status: 'CRITICAL' },
+    { hospital: 'St. Paul Specialized Hospital', group: 'A+', count: 32, status: 'STABLE' },
+    { hospital: 'Hawassa Referral Hospital', group: 'B-', count: 8, status: 'LOW' },
+    { hospital: 'Mekelle General Hospital', group: 'AB+', count: 19, status: 'STABLE' },
+  ];
+
+  useEffect(() => {
+    async function loadHospitals() {
+      try {
+        const { data } = await api.get('/hospitals');
+        if (Array.isArray(data) && data.length > 0) {
+          setHospitals(data);
+        } else {
+          setHospitals(defaultHospitals);
+        }
+      } catch {
+        setHospitals(defaultHospitals);
+      }
+    }
+    loadHospitals();
+  }, []);
+
+  const filteredHospitals = hospitals.filter(h => 
     h.name.toLowerCase().includes(hospQuery.toLowerCase()) || 
     h.city.toLowerCase().includes(hospQuery.toLowerCase())
   );
 
   return (
-    <div className="relative min-h-screen pb-16 overflow-x-hidden font-sans">
+    <div className="relative min-h-screen pb-16 overflow-x-hidden font-sans text-slate-800 dark:text-slate-100">
       <div className="bg-mesh" />
+
+      {/* Top Notification Announcement Bar */}
+      <div className="bg-gradient-to-r from-teal-900 via-teal-800 to-cyan-900 text-white text-xs font-bold py-2 px-4 text-center flex items-center justify-center gap-2 border-b border-teal-500/20">
+        <span className="px-2 py-0.5 rounded-full bg-teal-500/30 text-teal-200 text-[10px] uppercase font-extrabold tracking-wider">
+          MediLink AI 2.0
+        </span>
+        <span>Real-Time Emergency Dispatch & Multilingual Clinical Gemini Integration is Live in Ethiopia</span>
+      </div>
 
       {/* ================= HEADER / NAVBAR ================= */}
       <header className="sticky top-0 z-40 w-full glass-card border-b border-slate-200/20 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-teal-700 flex items-center justify-center text-white shadow-lg shadow-teal-700/30">
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-700 to-cyan-600 flex items-center justify-center text-white shadow-lg shadow-teal-700/30 group-hover:scale-105 transition">
               <Activity className="w-6 h-6 animate-pulse" />
             </div>
-            <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-teal-700 to-cyan-600 bg-clip-text text-transparent">
-              {t('appName')}
-            </span>
-          </div>
+            <div className="flex flex-col">
+              <span className="text-xl font-black tracking-tight bg-gradient-to-r from-teal-700 via-teal-600 to-cyan-600 bg-clip-text text-transparent">
+                {t('appName')}
+              </span>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 -mt-1">
+                Ethiopian Healthcare AI
+              </span>
+            </div>
+          </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-700 dark:text-slate-200">
-            <a href="#" className="hover:text-teal-700 transition">{t('home')}</a>
-            <a href="#hospitals-section" className="hover:text-teal-700 transition">{t('hospitals')}</a>
-            <a href="#features-section" className="hover:text-teal-700 transition">Features</a>
-            <a href="#blood-section" className="hover:text-teal-700 transition">Blood bank</a>
+          <nav className="hidden md:flex items-center gap-8 text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+            <a href="#" className="hover:text-teal-600 dark:hover:text-teal-400 transition">{t('home')}</a>
+            <a href="#features-section" className="hover:text-teal-600 dark:hover:text-teal-400 transition">Features</a>
+            <a href="#hospitals-section" className="hover:text-teal-600 dark:hover:text-teal-400 transition">{t('hospitals')}</a>
+            <a href="#blood-section" className="hover:text-teal-600 dark:hover:text-teal-400 transition">Blood Bank</a>
+            <a href="#languages-section" className="hover:text-teal-600 dark:hover:text-teal-400 transition">Languages</a>
           </nav>
 
-          {/* Controls */}
+          {/* Controls & Language Selector */}
           <div className="hidden md:flex items-center gap-4">
+            <NotificationBell />
+
             {/* Language Selection */}
-            <div className="flex items-center gap-1.5 p-1.5 bg-slate-200/40 dark:bg-slate-800/40 rounded-lg border border-slate-200/20">
+            <div className="flex items-center gap-1 p-1 bg-slate-200/50 dark:bg-slate-800/60 rounded-xl border border-slate-200/20">
               <button 
                 onClick={() => setLanguage('en')} 
-                className={`px-2 py-1 text-xs font-bold rounded transition ${language === 'en' ? 'bg-teal-700 text-white shadow-sm' : 'hover:bg-slate-200/50'}`}
+                className={`px-2.5 py-1 text-xs font-black rounded-lg transition ${language === 'en' ? 'bg-teal-700 text-white shadow-md' : 'hover:bg-slate-200/50 opacity-70'}`}
               >
                 EN
               </button>
               <button 
                 onClick={() => setLanguage('am')} 
-                className={`px-2 py-1 text-xs font-bold rounded transition ${language === 'am' ? 'bg-teal-700 text-white shadow-sm' : 'hover:bg-slate-200/50'}`}
+                className={`px-2.5 py-1 text-xs font-black rounded-lg transition ${language === 'am' ? 'bg-teal-700 text-white shadow-md' : 'hover:bg-slate-200/50 opacity-70'}`}
               >
                 አማ
               </button>
               <button 
                 onClick={() => setLanguage('om')} 
-                className={`px-2 py-1 text-xs font-bold rounded transition ${language === 'om' ? 'bg-teal-700 text-white shadow-sm' : 'hover:bg-slate-200/50'}`}
+                className={`px-2.5 py-1 text-xs font-black rounded-lg transition ${language === 'om' ? 'bg-teal-700 text-white shadow-md' : 'hover:bg-slate-200/50 opacity-70'}`}
               >
                 OM
               </button>
@@ -119,17 +181,19 @@ export default function LandingPage() {
             {/* Login Link */}
             <Link 
               href="/auth" 
-              className="px-5 py-2.5 text-sm font-bold bg-teal-700 hover:bg-teal-600 text-white rounded-xl shadow-lg shadow-teal-700/20 transition hover-scale"
+              className="px-5 py-2.5 text-xs font-extrabold bg-teal-700 hover:bg-teal-600 text-white rounded-xl shadow-lg shadow-teal-700/20 transition hover-scale flex items-center gap-1.5"
             >
-              {t('login')}
+              <span>{t('login')}</span>
+              <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
 
           {/* Mobile menu trigger */}
           <div className="flex md:hidden items-center gap-2">
+            <NotificationBell />
             <button 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg hover:bg-slate-200/30 transition text-slate-700 dark:text-slate-200"
+              className="p-2 rounded-xl hover:bg-slate-200/30 transition text-slate-700 dark:text-slate-200"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -138,156 +202,318 @@ export default function LandingPage() {
 
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-200/20 bg-slate-50 dark:bg-slate-900 px-4 py-4 space-y-4 shadow-xl">
-            <div className="flex flex-col gap-3 font-semibold text-slate-700 dark:text-slate-200">
-              <a href="#" onClick={() => setMobileMenuOpen(false)} className="hover:text-teal-700 transition">{t('home')}</a>
-              <a href="#hospitals-section" onClick={() => setMobileMenuOpen(false)} className="hover:text-teal-700 transition">{t('hospitals')}</a>
-              <a href="#features-section" onClick={() => setMobileMenuOpen(false)} className="hover:text-teal-700 transition">Features</a>
-              <a href="#blood-section" onClick={() => setMobileMenuOpen(false)} className="hover:text-teal-700 transition">Blood bank</a>
+          <div className="md:hidden glass-card border-b border-slate-200/20 px-4 py-4 space-y-4 animate-fadeIn">
+            <nav className="flex flex-col space-y-2 text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+              <a href="#" className="p-2 hover:bg-slate-200/30 rounded-lg">{t('home')}</a>
+              <a href="#features-section" className="p-2 hover:bg-slate-200/30 rounded-lg">Features</a>
+              <a href="#hospitals-section" className="p-2 hover:bg-slate-200/30 rounded-lg">{t('hospitals')}</a>
+              <a href="#blood-section" className="p-2 hover:bg-slate-200/30 rounded-lg">Blood Bank</a>
+              <a href="#languages-section" className="p-2 hover:bg-slate-200/30 rounded-lg">Languages</a>
+            </nav>
+            <div className="pt-3 border-t border-slate-200/20 flex flex-col gap-3">
+              <div className="flex justify-center gap-2 p-1.5 bg-slate-200/40 rounded-xl">
+                <button onClick={() => setLanguage('en')} className={`px-3 py-1 text-xs font-bold rounded ${language === 'en' ? 'bg-teal-700 text-white' : ''}`}>EN</button>
+                <button onClick={() => setLanguage('am')} className={`px-3 py-1 text-xs font-bold rounded ${language === 'am' ? 'bg-teal-700 text-white' : ''}`}>አማ</button>
+                <button onClick={() => setLanguage('om')} className={`px-3 py-1 text-xs font-bold rounded ${language === 'om' ? 'bg-teal-700 text-white' : ''}`}>OM</button>
+              </div>
+              <Link 
+                href="/auth" 
+                className="w-full text-center py-3 text-xs font-extrabold bg-teal-700 text-white rounded-xl shadow-md"
+              >
+                {t('login')}
+              </Link>
             </div>
-            
-            <div className="flex items-center gap-2 border-t border-slate-200/20 pt-4">
-              <span className="text-xs font-bold opacity-60">Language:</span>
-              <button onClick={() => setLanguage('en')} className={`px-2.5 py-1 text-xs font-bold rounded ${language === 'en' ? 'bg-teal-700 text-white' : 'bg-slate-200/50'}`}>EN</button>
-              <button onClick={() => setLanguage('am')} className={`px-2.5 py-1 text-xs font-bold rounded ${language === 'am' ? 'bg-teal-700 text-white' : 'bg-slate-200/50'}`}>አማ</button>
-              <button onClick={() => setLanguage('om')} className={`px-2.5 py-1 text-xs font-bold rounded ${language === 'om' ? 'bg-teal-700 text-white' : 'bg-slate-200/50'}`}>OM</button>
-            </div>
-
-            <Link 
-              href="/auth" 
-              className="block w-full text-center py-2.5 font-bold bg-teal-700 text-white rounded-xl shadow-lg"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              {t('login')}
-            </Link>
           </div>
         )}
       </header>
 
       {/* ================= HERO SECTION ================= */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 md:pt-20 pb-16 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-        <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-xs font-bold text-teal-700 dark:text-teal-400">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Digital Health Transformation Strategy Ready</span>
+      <section className="relative pt-12 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center lg:text-left flex flex-col lg:flex-row items-center justify-between gap-12">
+        <div className="flex-1 space-y-6">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-card border border-teal-500/30 text-teal-700 dark:text-teal-400 text-xs font-extrabold uppercase tracking-wider shadow-sm">
+            <Sparkles className="w-4 h-4 text-teal-600 animate-spin" />
+            AI Emergency & Healthcare Infrastructure
           </div>
-
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight">
-            {t('heroTitle')}
+          
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.12]">
+            Next-Gen Healthcare for <span className="bg-gradient-to-r from-teal-600 via-teal-500 to-cyan-500 bg-clip-text text-transparent">Ethiopia</span>
           </h1>
 
-          <p className="text-base sm:text-lg opacity-85 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-            {t('heroSubtitle')}
+          <p className="text-base sm:text-lg opacity-85 max-w-2xl font-medium leading-relaxed">
+            Instant AI clinical symptom analysis in Amharic & Afaan Oromo, real-time hospital bed & ICU queue tracking, local Telebirr payments, and 1-tap emergency dispatch.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+          <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
             <button
               onClick={() => setSymptomModalOpen(true)}
-              className="px-6 py-3.5 font-bold bg-teal-700 hover:bg-teal-600 text-white rounded-xl shadow-xl shadow-teal-700/20 flex items-center justify-center gap-2 transition hover-scale"
+              className="w-full sm:w-auto px-7 py-4 bg-gradient-to-r from-teal-700 to-teal-600 hover:from-teal-600 hover:to-teal-500 text-white font-extrabold rounded-2xl shadow-2xl shadow-teal-700/30 flex items-center justify-center gap-2.5 transition hover-scale text-sm"
             >
-              <Activity className="w-5 h-5" />
-              {t('symptomCheckerBtn')}
+              <Sparkles className="w-5 h-5 text-yellow-300 animate-pulse" />
+              {t('checkSymptoms')}
             </button>
-            
+
             <button
               onClick={() => setSosPanelOpen(true)}
-              className="px-6 py-3.5 font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-xl shadow-xl shadow-rose-600/20 flex items-center justify-center gap-2 transition hover-scale animate-pulse"
+              className="w-full sm:w-auto px-7 py-4 bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-extrabold rounded-2xl shadow-2xl shadow-rose-600/35 flex items-center justify-center gap-2.5 transition hover-scale text-sm relative overflow-hidden group"
             >
-              <Phone className="w-5 h-5" />
-              {t('emergencySOSBtn')}
+              <Siren className="w-5 h-5 animate-bounce" />
+              <span>{t('sosEmergency')}</span>
             </button>
+          </div>
+
+          {/* Quick Metrics Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 border-t border-slate-200/20 text-xs">
+            <div>
+              <div className="text-lg font-black text-teal-600 dark:text-teal-400">30,000+</div>
+              <div className="opacity-60 text-[11px] font-bold">Patients Served</div>
+            </div>
+            <div>
+              <div className="text-lg font-black text-cyan-600 dark:text-cyan-400">12+</div>
+              <div className="opacity-60 text-[11px] font-bold">Referral Hospitals</div>
+            </div>
+            <div>
+              <div className="text-lg font-black text-emerald-600 dark:text-emerald-400">99.8%</div>
+              <div className="opacity-60 text-[11px] font-bold">Uptime Reliability</div>
+            </div>
+            <div>
+              <div className="text-lg font-black text-rose-500">1-Tap</div>
+              <div className="opacity-60 text-[11px] font-bold">Telebirr SOS</div>
+            </div>
           </div>
         </div>
 
-        {/* Dashboard graphic card right */}
-        <div className="lg:col-span-5 flex justify-center">
-          <div className="w-full max-w-md overflow-hidden rounded-2xl glass-card border border-white/20 p-6 space-y-4 hover-scale shadow-2xl relative">
-            <div className="absolute top-2 right-2 text-[9px] font-bold px-2 py-0.5 bg-rose-500/10 border border-rose-500/30 text-rose-500 rounded-full flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
-              Addis Ababa SOS System
+        {/* Hero Interactive Card Graphic */}
+        <div className="w-full lg:w-5/12 glass-card-pro rounded-3xl border border-white/30 p-6 shadow-2xl relative space-y-5 hover-scale animate-float">
+          <div className="flex items-center justify-between border-b border-slate-200/20 pb-3">
+            <div className="flex items-center gap-2">
+              <Activity className="w-5 h-5 text-teal-600 animate-pulse" />
+              <span className="text-xs font-extrabold uppercase tracking-wider text-teal-700 dark:text-teal-400">Live Network Telemetry</span>
             </div>
-            
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-600">
-                <Activity className="w-7 h-7" />
-              </div>
-              <div>
-                <h3 className="font-bold text-sm">Emergency Dispatch Monitor</h3>
-                <span className="text-xs opacity-60">Status: Active Gateway</span>
-              </div>
-            </div>
+            <span className="flex h-3 w-3 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+          </div>
 
-            {/* Outbreak chart mockup */}
-            <div className="p-3 rounded-xl bg-slate-900/10 dark:bg-black/20 border border-white/5 space-y-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">Regional Epidemic Indicator (Weekly)</span>
-              <div className="h-20 flex items-end justify-between gap-1 pt-4">
-                <div className="w-full bg-teal-500/40 h-8 rounded-sm text-center text-[8px] font-bold pt-1">Mon</div>
-                <div className="w-full bg-teal-500/60 h-12 rounded-sm text-center text-[8px] font-bold pt-1">Tue</div>
-                <div className="w-full bg-teal-500/50 h-10 rounded-sm text-center text-[8px] font-bold pt-1">Wed</div>
-                <div className="w-full bg-teal-700 h-16 rounded-sm text-center text-[8px] font-bold pt-1 relative">
-                  <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[9px] font-bold text-teal-600">Peak</span>
-                  Thu
+          <div className="space-y-3">
+            <div className="p-4 rounded-2xl bg-white/40 dark:bg-slate-800/40 border border-white/20 shadow-sm flex items-center justify-between text-xs">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-teal-500/10 text-teal-600">
+                  <Bed className="w-5 h-5" />
                 </div>
-                <div className="w-full bg-teal-500/80 h-14 rounded-sm text-center text-[8px] font-bold pt-1">Fri</div>
+                <div>
+                  <div className="font-extrabold text-sm">Network Bed Capacity</div>
+                  <span className="text-[10px] opacity-60">Addis Ababa & Regional Hubs</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <strong className="text-sm font-black text-teal-700 dark:text-teal-400">1,480 Available</strong>
+                <div className="w-20 bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-1 overflow-hidden">
+                  <div className="bg-teal-500 h-full w-3/4"></div>
+                </div>
               </div>
             </div>
 
-            <div className="text-[11px] opacity-75 border-t border-slate-200/20 pt-3 flex justify-between">
-              <span>Verified ICU Bed Allocation: <strong>92% occupied</strong></span>
-              <span>Available Drivers: <strong>14 units</strong></span>
+            <div className="p-4 rounded-2xl bg-white/40 dark:bg-slate-800/40 border border-white/20 shadow-sm flex items-center justify-between text-xs">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-500">
+                  <Droplet className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-extrabold text-sm">National Blood Reserve</div>
+                  <span className="text-[10px] opacity-60">Central Bank Dispatch</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <strong className="text-xs font-extrabold text-rose-500 px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/20">
+                  O- & A+ Critical
+                </strong>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/20 to-teal-950/20 border border-purple-500/20 text-xs flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-5 h-5 text-purple-400" />
+                <div>
+                  <div className="font-extrabold">Clinical AI Multilingual Triage</div>
+                  <span className="text-[10px] opacity-75">Amharic, Afaan Oromo, English</span>
+                </div>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px] font-extrabold">Active</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ================= HOSPITALS DIRECTORY ================= */}
-      <section id="hospitals-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-slate-200/10">
-        <div className="text-center max-w-2xl mx-auto mb-10">
-          <h2 className="text-3xl font-extrabold tracking-tight">{t('hospitals')} & Bed Analytics</h2>
-          <p className="text-sm opacity-80 mt-2">Check live telemetry of leading Ethiopian hospitals, predicting waiting queues and clinical capacities before check-in.</p>
+      {/* ================= FEATURES SHOWCASE SECTION ================= */}
+      <section id="features-section" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12">
+        <div className="text-center max-w-3xl mx-auto space-y-4">
+          <span className="px-3.5 py-1 rounded-full bg-teal-500/10 text-teal-600 text-xs font-extrabold uppercase tracking-wider">
+            Engineered For Impact
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight">Complete Healthcare Lifecycle Support</h2>
+          <p className="opacity-75 text-sm font-medium">
+            Designed specifically to address clinical workflows, language barriers, and emergency response in Ethiopia.
+          </p>
         </div>
 
-        {/* Search bar */}
-        <div className="max-w-md mx-auto mb-8 relative">
-          <Search className="w-5 h-5 absolute left-3 top-3.5 opacity-60" />
-          <input
-            type="text"
-            className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200/40 bg-white/30 dark:bg-slate-800/40 focus:outline-none focus:ring-2 focus:ring-teal-700 text-sm font-sans"
-            placeholder={t('searchHospitals')}
-            value={hospQuery}
-            onChange={(e) => setHospQuery(e.target.value)}
-          />
+        {/* Feature Tabs */}
+        <div className="flex justify-center gap-2 border-b border-slate-200/20 pb-4 overflow-x-auto">
+          {(['AI', 'TELEMETRY', 'SOS', 'PAYMENTS'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveFeatureTab(tab)}
+              className={`px-5 py-2.5 text-xs font-black rounded-xl transition ${
+                activeFeatureTab === tab 
+                  ? 'bg-teal-700 text-white shadow-lg shadow-teal-700/20' 
+                  : 'bg-white/10 hover:bg-slate-200/40 opacity-70'
+              }`}
+            >
+              {tab === 'AI' && '🤖 AI Diagnostics'}
+              {tab === 'TELEMETRY' && '🏥 Hospital Telemetry'}
+              {tab === 'SOS' && '🚨 1-Tap SOS Dispatch'}
+              {tab === 'PAYMENTS' && '💳 Local Payments'}
+            </button>
+          ))}
         </div>
 
-        {/* Grid of hospitals */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {filteredHospitals.map((h, i) => (
-            <div key={i} className={`p-5 rounded-2xl glass-card border ${h.color} hover-scale flex flex-col justify-between space-y-4`}>
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-teal-500/10 text-teal-700 dark:text-teal-400">
-                    Specialized
-                  </span>
-                  <div className="flex items-center gap-1 text-[11px] opacity-75">
-                    <MapPin className="w-3.5 h-3.5" />
-                    {h.city}
+        {/* Feature Display Card */}
+        <div className="glass-card-pro p-8 rounded-3xl border border-white/20 shadow-2xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          {activeFeatureTab === 'AI' && (
+            <>
+              <div className="lg:col-span-6 space-y-4">
+                <span className="text-xs font-extrabold uppercase text-purple-600 dark:text-purple-400">Powered by Google Gemini</span>
+                <h3 className="text-2xl font-black">AI Multilingual Symptom Analysis & Clinical Triage</h3>
+                <p className="text-xs opacity-80 leading-relaxed font-medium">
+                  Patients input symptoms naturally in Amharic, Afaan Oromo, or English. The clinical AI evaluates severity, suggests immediate home care instructions, recommends appropriate medical specialists, and flags emergency conditions.
+                </p>
+                <div className="space-y-2 text-xs font-bold">
+                  <div className="flex items-center gap-2 text-emerald-600"><CheckCircle className="w-4 h-4" /> Native Amharic & Afaan Oromo NLP support</div>
+                  <div className="flex items-center gap-2 text-emerald-600"><CheckCircle className="w-4 h-4" /> Emergency triage severity grading</div>
+                  <div className="flex items-center gap-2 text-emerald-600"><CheckCircle className="w-4 h-4" /> Direct integration with Doctor consultations</div>
+                </div>
+              </div>
+              <div className="lg:col-span-6 p-6 rounded-2xl bg-slate-900 text-slate-100 font-mono text-xs space-y-3">
+                <div className="text-purple-400 font-bold">&gt; Input: "ከባድ እራስ ምታት እና ትኩሳት አለብኝ"</div>
+                <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200">
+                  <strong>AI Response:</strong> የመተንፈሻ አካላት ኢንፌክሽን ወይም ከፍተኛ ትኩሳት ምልክት ሊሆን ይችላል:: እባክዎ አቅራቢያ የሚገኝ ሆስፒታል ያግኙ::
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeFeatureTab === 'TELEMETRY' && (
+            <>
+              <div className="lg:col-span-6 space-y-4">
+                <span className="text-xs font-extrabold uppercase text-teal-600 dark:text-teal-400">Live Hospital Telemetry</span>
+                <h3 className="text-2xl font-black">Real-Time Bed, ICU & Waiting Queue Monitoring</h3>
+                <p className="text-xs opacity-80 leading-relaxed font-medium">
+                  Eliminating emergency room guesswork. Hospitals maintain live counts of general beds, ICU availability, and estimated waiting queues so patients and ambulances can navigate straight to available resources.
+                </p>
+                <div className="space-y-2 text-xs font-bold">
+                  <div className="flex items-center gap-2 text-emerald-600"><CheckCircle className="w-4 h-4" /> Hospital Admin Capacity Control Panel</div>
+                  <div className="flex items-center gap-2 text-emerald-600"><CheckCircle className="w-4 h-4" /> Real-Time ICU availability updates</div>
+                </div>
+              </div>
+              <div className="lg:col-span-6 space-y-3">
+                <div className="p-4 rounded-2xl glass-card border border-teal-500/30">
+                  <div className="flex justify-between font-bold text-xs">
+                    <span>Tikur Anbessa Hospital</span>
+                    <span className="text-teal-600">720 / 800 Beds</span>
+                  </div>
+                  <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full mt-2 overflow-hidden">
+                    <div className="bg-teal-600 h-full w-[90%]"></div>
                   </div>
                 </div>
-                <h3 className="font-extrabold text-base">{h.name}</h3>
+              </div>
+            </>
+          )}
+
+          {activeFeatureTab === 'SOS' && (
+            <>
+              <div className="lg:col-span-6 space-y-4">
+                <span className="text-xs font-extrabold uppercase text-rose-500">WebSocket Dispatch</span>
+                <h3 className="text-2xl font-black">1-Tap Emergency SOS & Ambulance Trackers</h3>
+                <p className="text-xs opacity-80 leading-relaxed font-medium">
+                  In critical emergencies, pressing the SOS button broadcasts live patient coordinates directly to available mobile ambulance units with continuous 5-second GPS position updates.
+                </p>
+              </div>
+              <div className="lg:col-span-6 p-6 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-xs space-y-3">
+                <div className="flex justify-between font-bold text-rose-600">
+                  <span className="flex items-center gap-1.5"><Siren className="w-4 h-4 animate-bounce" /> Emergency Beacon Active</span>
+                  <span>GPS Broadcasted</span>
+                </div>
+                <div className="font-bold text-sm">Ambulance Unit CODE-3-A109 Dispatched</div>
+              </div>
+            </>
+          )}
+
+          {activeFeatureTab === 'PAYMENTS' && (
+            <>
+              <div className="lg:col-span-6 space-y-4">
+                <span className="text-xs font-extrabold uppercase text-cyan-600">Financial Inclusion</span>
+                <h3 className="text-2xl font-black">Telebirr, Chapa & CBE Birr Payment Gateways</h3>
+                <p className="text-xs opacity-80 leading-relaxed font-medium">
+                  Integrated with local payment platforms for instant medical bill settlement, pharmacy prescriptions, and lab test invoices without requiring credit cards.
+                </p>
+              </div>
+              <div className="lg:col-span-6 grid grid-cols-2 gap-4 text-center">
+                <div className="p-4 rounded-2xl glass-card border border-white/20 font-black text-sm text-teal-600">
+                  telebirr
+                </div>
+                <div className="p-4 rounded-2xl glass-card border border-white/20 font-black text-sm text-cyan-600">
+                  CHAPA
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* ================= HOSPITALS SECTION ================= */}
+      <section id="hospitals-section" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200/20 pb-4">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">Live Hospital Network</span>
+            <h2 className="text-3xl font-extrabold tracking-tight mt-1">{t('hospitals')}</h2>
+          </div>
+          <div className="relative w-full md:w-80">
+            <Search className="w-4 h-4 absolute left-3 top-3.5 opacity-60" />
+            <input
+              type="text"
+              placeholder="Search by hospital name or city..."
+              className="w-full pl-9 pr-4 py-2.5 text-xs rounded-xl border border-slate-200/40 bg-white/20 dark:bg-slate-800/40 focus:outline-none focus:ring-2 focus:ring-teal-700"
+              value={hospQuery}
+              onChange={(e) => setHospQuery(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {filteredHospitals.map((hosp) => (
+            <div key={hosp.id || hosp.name} className="p-6 rounded-3xl glass-card-pro border border-white/20 shadow-xl space-y-4 hover-scale">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-extrabold text-base leading-snug">{hosp.name}</h3>
+                  <span className="text-xs opacity-60 flex items-center gap-1 mt-1">
+                    <MapPin className="w-3.5 h-3.5" /> {hosp.city}
+                  </span>
+                </div>
+                {hosp.isEmergencyAvailable && (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                    24/7 ER
+                  </span>
+                )}
               </div>
 
-              <div className="space-y-2 border-t border-slate-200/20 pt-3 text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="opacity-75 flex items-center gap-1.5"><Bed className="w-4 h-4 text-teal-600" /> Bed Occupancy:</span>
-                  <strong className="font-semibold">{h.beds}</strong>
+              <div className="grid grid-cols-2 gap-3 text-xs pt-2">
+                <div className="p-3 bg-white/10 rounded-xl">
+                  <span className="opacity-60 text-[10px] uppercase font-bold block">Bed Occupancy</span>
+                  <strong className="text-xs font-bold text-teal-600">{hosp.occupiedBeds} / {hosp.totalBeds}</strong>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="opacity-75 flex items-center gap-1.5"><ShieldCheck className="w-4 h-4 text-teal-600" /> ICU Capacity:</span>
-                  <strong className="font-semibold">{h.icu}</strong>
-                </div>
-                <div className="flex justify-between items-center text-xs p-1.5 bg-teal-500/5 rounded">
-                  <span className="opacity-75">AI Queue Prediction:</span>
-                  <strong className="text-teal-700 dark:text-teal-400">{h.queue}</strong>
+                <div className="p-3 bg-white/10 rounded-xl">
+                  <span className="opacity-60 text-[10px] uppercase font-bold block">ICU Units</span>
+                  <strong className="text-xs font-bold text-cyan-600">{hosp.occupiedICUBeds} / {hosp.totalICUBeds}</strong>
                 </div>
               </div>
             </div>
@@ -295,105 +521,66 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ================= CORE FEATURES GRID ================= */}
-      <section id="features-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-slate-200/10">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-3xl font-extrabold tracking-tight">Ecosystem Capabilities</h2>
-          <p className="text-sm opacity-80 mt-2">Digitizing clinical paths, emergency rescues, and pharmacies in Ethiopia.</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Card 1 */}
-          <div className="p-6 rounded-2xl glass-card hover-scale space-y-3">
-            <div className="w-12 h-12 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-700 dark:text-teal-400">
-              <Activity className="w-6 h-6 animate-pulse" />
-            </div>
-            <h3 className="text-lg font-bold">{t('aiTriageTitle')}</h3>
-            <p className="text-sm opacity-85">{t('aiTriageDesc')}</p>
-          </div>
-
-          {/* Card 2 */}
-          <div className="p-6 rounded-2xl glass-card hover-scale space-y-3">
-            <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-700 dark:text-cyan-400">
-              <Users className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold">{t('digitalRecordsTitle')}</h3>
-            <p className="text-sm opacity-85">{t('digitalRecordsDesc')}</p>
-          </div>
-
-          {/* Card 3 */}
-          <div className="p-6 rounded-2xl glass-card hover-scale space-y-3">
-            <div className="w-12 h-12 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-700 dark:text-rose-400">
-              <Phone className="w-6 h-6 animate-bounce" />
-            </div>
-            <h3 className="text-lg font-bold">One-Click GPS SOS Alert</h3>
-            <p className="text-sm opacity-85">Instant ambulance dispatching, updating patients of live coordinates and distance telemetries.</p>
-          </div>
-        </div>
-      </section>
-
       {/* ================= BLOOD BANK SECTION ================= */}
-      <section id="blood-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-slate-200/10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          <div className="lg:col-span-6 space-y-4">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-xs font-bold text-rose-600">
-              <Droplet className="w-4 h-4 fill-current text-rose-500" />
-              <span>National Blood Stock Initiative</span>
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight">{t('bloodTitle')}</h2>
-            <p className="text-sm opacity-85 leading-relaxed">
-              {t('bloodDesc')} MediLink coordinates with the Ethiopian Red Cross and major public hospitals to provide real-time lookup for emergency blood bags, assisting transfusion logistics.
-            </p>
-            
-            <div className="grid grid-cols-2 gap-4 pt-2">
-              <div className="p-4 rounded-xl bg-slate-500/5 border border-slate-200/20">
-                <span className="text-2xl font-black text-rose-500">45 Bags</span>
-                <span className="text-xs opacity-75 block mt-1">Black Lion (O+ / A+)</span>
-              </div>
-              <div className="p-4 rounded-xl bg-slate-500/5 border border-slate-200/20">
-                <span className="text-2xl font-black text-rose-500">22 Bags</span>
-                <span className="text-xs opacity-75 block mt-1">St. Paul (B+ / O-)</span>
-              </div>
-            </div>
-          </div>
+      <section id="blood-section" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
+        <div className="border-b border-slate-200/20 pb-4">
+          <span className="text-xs font-bold uppercase tracking-wider text-rose-500">Emergency Resources</span>
+          <h2 className="text-3xl font-extrabold tracking-tight mt-1">National Blood Reserves</h2>
+        </div>
 
-          <div className="lg:col-span-6 p-6 rounded-2xl glass-card border border-white/20 space-y-4">
-            <h3 className="font-bold text-base">Payment Integrations</h3>
-            <p className="text-xs opacity-80">Pay clinic fees, verify pharmacy prescriptions, and claim insurance invoices using Ethiopian gateways.</p>
-            <div className="grid grid-cols-4 gap-3">
-              <div className="p-2 border border-slate-200/20 bg-slate-100/50 rounded-lg flex items-center justify-center font-extrabold text-xs text-slate-800">Telebirr</div>
-              <div className="p-2 border border-slate-200/20 bg-slate-100/50 rounded-lg flex items-center justify-center font-extrabold text-xs text-teal-700">Chapa</div>
-              <div className="p-2 border border-slate-200/20 bg-slate-100/50 rounded-lg flex items-center justify-center font-extrabold text-xs text-blue-700">CBE Birr</div>
-              <div className="p-2 border border-slate-200/20 bg-slate-100/50 rounded-lg flex items-center justify-center font-extrabold text-xs text-indigo-700">SantimPay</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {bloodStocksList.map((item, idx) => (
+            <div key={idx} className="p-5 rounded-2xl glass-card border border-rose-500/20 hover-scale space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-2xl font-black text-rose-500">{item.group}</span>
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
+                  item.status === 'CRITICAL' ? 'bg-rose-500/20 text-rose-600' : 'bg-emerald-500/20 text-emerald-600'
+                }`}>
+                  {item.status}
+                </span>
+              </div>
+              <div>
+                <h4 className="font-bold text-xs">{item.hospital}</h4>
+                <span className="text-[10px] opacity-60 font-semibold">{item.count} Bags Available</span>
+              </div>
             </div>
-            <div className="text-[10px] opacity-60">Production payments simulator handles callback checkouts automatically.</div>
-          </div>
+          ))}
         </div>
       </section>
 
-      {/* ================= MODALS & SLIDE PANELS ================= */}
-      <SymptomCheckerModal 
-        isOpen={symptomModalOpen} 
-        onClose={() => setSymptomModalOpen(false)} 
-      />
+      {/* CTA Footer Banner */}
+      <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-r from-teal-900 via-teal-800 to-cyan-900 text-white shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="space-y-2 text-center md:text-left">
+            <h3 className="text-2xl sm:text-3xl font-black">Ready to Experience MediLink AI?</h3>
+            <p className="text-xs opacity-80 max-w-xl font-medium">
+              Join thousands of healthcare providers, patients, and emergency responders across Ethiopia.
+            </p>
+          </div>
+          <Link
+            href="/auth"
+            className="px-8 py-4 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black rounded-2xl shadow-xl transition hover-scale text-xs uppercase tracking-wider"
+          >
+            Access Platform Portals
+          </Link>
+        </div>
+      </section>
 
-      {/* SOS Panel Slider */}
+      {/* Modals */}
+      {symptomModalOpen && (
+        <SymptomCheckerModal isOpen={symptomModalOpen} onClose={() => setSymptomModalOpen(false)} />
+      )}
+
       {sosPanelOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 h-full p-6 shadow-2xl relative flex flex-col justify-between overflow-y-auto border-l border-white/10 animate-slideLeft">
-            <div>
-              <div className="flex items-center justify-between pb-4 border-b border-slate-200/20 mb-6">
-                <span className="font-bold text-lg text-rose-600 flex items-center gap-1.5"><Phone className="w-5 h-5 animate-ping" /> Emergency Gateway</span>
-                <button onClick={() => setSosPanelOpen(false)} className="p-1 rounded-full hover:bg-slate-200/20 transition">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <SOSWidget patientId="patient-demo-uuid-tewodros" />
-            </div>
-
-            <div className="mt-8 text-center text-[10px] opacity-60">
-              SOS Broadcasts share mock geolocation variables with mock ambulance server listening locally on port 5000.
-            </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-lg overflow-hidden rounded-3xl glass-card border border-white/20 p-6">
+            <button 
+              onClick={() => setSosPanelOpen(false)}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-200/30 transition text-slate-500"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <SOSWidget patientId="guest-patient-demo" />
           </div>
         </div>
       )}
