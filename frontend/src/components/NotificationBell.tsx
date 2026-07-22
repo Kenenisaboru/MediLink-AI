@@ -74,7 +74,7 @@ export default function NotificationBell() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl glass-card-pro border border-white/20 shadow-2xl z-50 overflow-hidden animate-fadeIn text-xs">
+        <div className="absolute right-0 mt-2 w-[calc(100vw-2.5rem)] max-w-sm sm:w-96 rounded-2xl glass-card-pro border border-white/20 shadow-2xl z-50 overflow-hidden animate-fadeIn text-xs">
           <div className="p-4 border-b border-slate-200/20 flex items-center justify-between bg-white/5">
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4 text-teal-600" />
