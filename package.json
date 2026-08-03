@@ -1,8 +1,14 @@
 {
   "devDependencies": {
-    "prisma": "^5.22.0"
+    "prisma": "^5.22.0",
+    "@faker-js/faker": "^8.0.0",
+    "tsx": "^4.0.0",
+    "ts-node": "^10.9.1"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0"
+  },
+  "scripts": {
+    "seed": "tsx database/prisma/seed.ts"
   }
 }
