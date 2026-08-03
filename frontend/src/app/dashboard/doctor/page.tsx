@@ -269,7 +269,7 @@ export default function DoctorDashboard() {
   const doctorName = (user?.profile as any)?.fullName ?? 'Physician';
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-300">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#02060e] text-slate-800 dark:text-slate-100 transition-colors duration-300">
 
       {/* Background Depth */}
       <div className="fixed inset-0 bg-mesh -z-10 pointer-events-none" />
@@ -655,21 +655,21 @@ export default function DoctorDashboard() {
                     placeholder="Medication Name (e.g., Amoxicillin)"
                     value={form.medName}
                     onChange={(e) => setForm({ ...form, medName: e.target.value })}
-                    className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 focus:outline-none"
+                    className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#02060e] focus:outline-none"
                   />
                   <input
                     type="text"
                     placeholder="Dosage (e.g., 500mg)"
                     value={form.medDosage}
                     onChange={(e) => setForm({ ...form, medDosage: e.target.value })}
-                    className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 focus:outline-none"
+                    className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#02060e] focus:outline-none"
                   />
                   <input
                     type="text"
                     placeholder="Frequency (e.g., 3x daily for 7 days)"
                     value={form.medFrequency}
                     onChange={(e) => setForm({ ...form, medFrequency: e.target.value })}
-                    className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 focus:outline-none"
+                    className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#02060e] focus:outline-none"
                   />
                 </div>
               </div>
@@ -685,14 +685,14 @@ export default function DoctorDashboard() {
                     placeholder="Test Name (e.g., Complete Blood Count - CBC)"
                     value={form.labTestName}
                     onChange={(e) => setForm({ ...form, labTestName: e.target.value })}
-                    className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 focus:outline-none"
+                    className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#02060e] focus:outline-none"
                   />
                   <input
                     type="text"
                     placeholder="Instructions for Lab (e.g., Fasting required)"
                     value={form.labInstructions}
                     onChange={(e) => setForm({ ...form, labInstructions: e.target.value })}
-                    className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 focus:outline-none"
+                    className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#02060e] focus:outline-none"
                   />
                 </div>
               </div>
