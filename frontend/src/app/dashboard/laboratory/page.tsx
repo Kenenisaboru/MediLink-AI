@@ -1,29 +1,20 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   CheckCircle,
   Clock,
-  Download,
   FileText,
   FlaskConical,
-  Plus,
   Search,
-  Upload,
-  User,
   Sparkles,
   AlertTriangle,
-  LogOut,
   Loader2,
-  Activity,
   FileCheck,
   ShieldCheck,
-  ChevronRight,
-  TrendingUp,
 } from 'lucide-react';
 import api from '../../../lib/api';
-import { clearTokens } from '../../../lib/auth';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
 import DashboardHeader from '../../../components/DashboardHeader';
 import { getSocket } from '../../../lib/socket';
@@ -45,7 +36,8 @@ interface LabRequest {
 
 export default function LaboratoryDashboard() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuthGuard('LABORATORY_TECH');
+  // ✅ FIX 1: Correct role — backend uses 'LAB_STAFF'
+  const { user, loading: authLoading } = useAuthGuard('LAB_STAFF');
 
   const [requests, setRequests] = useState<LabRequest[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
@@ -62,17 +54,23 @@ export default function LaboratoryDashboard() {
   const [aiExplanation, setAiExplanation] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
+  // ✅ FIX 2: Track whether we've done the initial auto-select to prevent the loop
+  const initialSelectDone = useRef(false);
+
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 3500);
   };
 
+  // ✅ FIX 3: Remove activeRequest from deps — causes infinite re-render loop
   const fetchRequests = useCallback(async () => {
     setDataLoading(true);
     try {
       const { data } = await api.get('/lab/requests');
       setRequests(data);
-      if (data.length > 0 && !activeRequest) {
+      // Only auto-select on first load
+      if (data.length > 0 && !initialSelectDone.current) {
+        initialSelectDone.current = true;
         setActiveRequest(data[0]);
         setResultInput(data[0].result || '');
         setNotesInput(data[0].resultNotes || '');
@@ -82,7 +80,7 @@ export default function LaboratoryDashboard() {
     } finally {
       setDataLoading(false);
     }
-  }, [activeRequest]);
+  }, []); // ← empty deps: stable reference, no loop
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -104,7 +102,6 @@ export default function LaboratoryDashboard() {
     };
 
     socket.on('lab-requested', handleLabRequested);
-
     return () => {
       socket.off('lab-requested', handleLabRequested);
     };
@@ -118,11 +115,12 @@ export default function LaboratoryDashboard() {
     }
     setActionLoading(true);
     try {
-      await api.post('/lab/upload-result', {
+      // ✅ FIX 4: Correct endpoint — backend route is /lab/results (not /lab/upload-result)
+      await api.post('/lab/results', {
         recordId: activeRequest.recordId,
         requestIndex: activeRequest.requestIndex,
         result: resultInput,
-        resultNotes: notesInput
+        resultNotes: notesInput,
       });
 
       exportLabReportPDF({
@@ -131,10 +129,11 @@ export default function LaboratoryDashboard() {
         resultValue: resultInput,
         resultNotes: notesInput,
         aiExplanation: aiExplanation || undefined,
-        requestedBy: activeRequest.requestedBy
+        requestedBy: activeRequest.requestedBy,
       });
 
       showToast('Diagnostic report published and PDF generated.');
+      setAiExplanation(null);
       await fetchRequests();
     } catch (err: any) {
       showToast(err.response?.data?.error ?? 'Publication failed.', false);
@@ -154,8 +153,8 @@ export default function LaboratoryDashboard() {
       const { data } = await api.get('/lab/explain', {
         params: {
           testName: activeRequest.testName,
-          resultValue: resultInput
-        }
+          resultValue: resultInput,
+        },
       });
       setAiExplanation(data.explanation);
     } catch {
@@ -166,7 +165,8 @@ export default function LaboratoryDashboard() {
   };
 
   const filtered = requests.filter((req) => {
-    const matchesSearch = req.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch =
+      req.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       req.testName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = filterStatus === 'ALL' || req.status === filterStatus;
     return matchesSearch && matchesStatus;
@@ -177,7 +177,7 @@ export default function LaboratoryDashboard() {
 
   if (authLoading || dataLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-white">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-[#02060e] text-slate-800 dark:text-slate-100">
         <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
         <span className="text-xs text-indigo-400 font-bold tracking-wider mt-4 uppercase animate-pulse">
           Loading Laboratory Workstation...
@@ -190,22 +190,21 @@ export default function LaboratoryDashboard() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#02060e] text-slate-800 dark:text-slate-100 transition-colors duration-300">
-      
+
       {/* Background */}
       <div className="fixed inset-0 bg-mesh -z-10 pointer-events-none" />
       <div className="fixed top-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-500/10 blur-[140px] pointer-events-none animate-float" />
       <div className="fixed bottom-[-10%] left-[-10%] w-[40vw] h-[40vw] rounded-full bg-purple-500/5 blur-[120px] pointer-events-none animate-float-delayed" />
 
-      {/* Unified Navigation Header */}
       <DashboardHeader userRole={user?.role} userName={techName} title="Diagnostic Laboratory Workstation" />
 
       <div className="flex-1 flex min-w-0">
 
-        {/* ── LEFT SIDEBAR (SIDE-BY-SIDE LAYOUT) ── */}
+        {/* ── LEFT SIDEBAR ── */}
         <aside className="w-72 hidden lg:flex flex-col justify-between sticky top-16 h-[calc(100vh-4rem)] bg-white/70 dark:bg-slate-900/60 border-r border-slate-200/40 dark:border-slate-800/40 backdrop-blur-md p-6 shrink-0 z-20">
           <div className="space-y-6">
-            
-            {/* Lab Technician Vitals Card */}
+
+            {/* Lab Technician Card */}
             <div className="p-4 rounded-3xl bg-slate-100/50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-800/50 space-y-3 shadow-md">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-black flex items-center justify-center text-lg shadow-lg shadow-indigo-500/20">
@@ -218,7 +217,7 @@ export default function LaboratoryDashboard() {
                   </span>
                 </div>
               </div>
-              
+
               <div className="pt-2 border-t border-slate-200/50 dark:border-slate-800/50 grid grid-cols-3 gap-2 text-center">
                 <div className="p-2 rounded-xl bg-white/50 dark:bg-slate-900/50">
                   <div className="font-black text-sm text-indigo-500">{requests.length}</div>
@@ -262,7 +261,6 @@ export default function LaboratoryDashboard() {
                 </button>
               ))}
             </nav>
-
           </div>
 
           <div className="pt-4 border-t border-slate-200/50 dark:border-slate-800/50 text-[10px] text-slate-400 font-extrabold text-center uppercase tracking-wider">
@@ -290,9 +288,9 @@ export default function LaboratoryDashboard() {
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black text-indigo-600 dark:text-indigo-400 tracking-wider uppercase bg-indigo-500/10 border border-indigo-500/20">
                 <ShieldCheck className="w-3.5 h-3.5" /> Diagnostic Laboratory Workstation
               </div>
-              <h2 className="text-3xl font-black tracking-tight">
+              <h1 className="text-3xl font-black tracking-tight">
                 <span className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">Pathology & Report Publishing</span>
-              </h2>
+              </h1>
               <p className="text-sm text-slate-500 dark:text-slate-400 font-medium max-w-xl">
                 Process doctor diagnostic test requests, publish verified lab findings, and utilize AI-assisted range reference interpretations.
               </p>
@@ -316,12 +314,12 @@ export default function LaboratoryDashboard() {
 
           {/* Side-by-side: Request List (7/12) & Active Report Workspace (5/12) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
+
             {/* Left Side List (7/12) */}
             <div className="lg:col-span-7 space-y-6">
-              
-              <div className="glass-card-pro rounded-3xl p-4 border border-white/20 dark:border-slate-800/20 flex flex-col sm:flex-row gap-4 items-center">
-                <div className="relative flex-1 w-full">
+
+              <div className="glass-card-pro rounded-3xl p-4 border border-white/20 dark:border-slate-800/20">
+                <div className="relative w-full">
                   <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
                   <input
                     type="text"
@@ -335,8 +333,10 @@ export default function LaboratoryDashboard() {
 
               <div className="space-y-4">
                 {filtered.length === 0 ? (
-                  <div className="glass-card-pro rounded-3xl p-8 text-center opacity-60 text-xs font-semibold">
-                    No diagnostic requests match current filter.
+                  <div className="glass-card-pro rounded-3xl p-10 text-center opacity-60 text-xs font-semibold">
+                    {requests.length === 0
+                      ? 'No diagnostic requests have been assigned yet. Requests appear here when doctors order lab tests.'
+                      : 'No requests match the current search or filter.'}
                   </div>
                 ) : (
                   filtered.map((req) => (
@@ -346,6 +346,7 @@ export default function LaboratoryDashboard() {
                         setActiveRequest(req);
                         setResultInput(req.result || '');
                         setNotesInput(req.resultNotes || '');
+                        setAiExplanation(null);
                       }}
                       className={`glass-card-pro rounded-3xl p-6 border transition-all cursor-pointer space-y-3 ${
                         activeRequest?.id === req.id
@@ -359,7 +360,9 @@ export default function LaboratoryDashboard() {
                           <h4 className="font-extrabold text-base text-slate-800 dark:text-slate-100">{req.patientName}</h4>
                         </div>
                         <span className={`px-3 py-1 rounded-full text-[10px] font-black border ${
-                          req.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+                          req.status === 'COMPLETED'
+                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
+                            : 'bg-amber-500/10 text-amber-600 border-amber-500/30'
                         }`}>
                           {req.status}
                         </span>
@@ -367,7 +370,7 @@ export default function LaboratoryDashboard() {
 
                       {req.instructions && (
                         <p className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100/50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-200/40 dark:border-slate-800/40 italic">
-                          "Instructions: {req.instructions}"
+                          Instructions: {req.instructions}
                         </p>
                       )}
 
@@ -379,7 +382,6 @@ export default function LaboratoryDashboard() {
                   ))
                 )}
               </div>
-
             </div>
 
             {/* Right Side Editor Panel (5/12) */}
@@ -411,27 +413,25 @@ export default function LaboratoryDashboard() {
                       <textarea
                         rows={3}
                         placeholder="Clinical remarks or reference range observations..."
-                        className="w-full px-4 py-2.5 text-xs font-semibold rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                        className="w-full px-4 py-2.5 text-xs font-semibold rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 resize-none"
                         value={notesInput}
                         onChange={(e) => setNotesInput(e.target.value)}
                       />
                     </div>
 
-                    {/* AI Explanation Button & Box */}
+                    {/* AI Explanation */}
                     <div className="space-y-2">
                       <button
                         type="button"
                         onClick={handleAIExplain}
-                        className="w-full py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-extrabold text-xs rounded-xl transition flex items-center justify-center gap-2 border border-indigo-500/20"
+                        disabled={aiLoading}
+                        className="w-full py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-extrabold text-xs rounded-xl transition flex items-center justify-center gap-2 border border-indigo-500/20 disabled:opacity-50"
                       >
-                        <Sparkles className="w-3.5 h-3.5 animate-pulse" /> Trigger AI Interpretation
+                        {aiLoading
+                          ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyzing ranges...</>
+                          : <><Sparkles className="w-3.5 h-3.5 animate-pulse" /> Trigger AI Interpretation</>
+                        }
                       </button>
-
-                      {aiLoading && (
-                        <div className="p-3 text-center text-xs text-indigo-500 font-bold flex items-center justify-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin" /> Analyzing result ranges...
-                        </div>
-                      )}
 
                       {aiExplanation && (
                         <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-800 dark:text-indigo-200 leading-relaxed font-medium">
@@ -443,7 +443,7 @@ export default function LaboratoryDashboard() {
                     <button
                       type="submit"
                       disabled={actionLoading}
-                      className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold text-xs rounded-2xl transition shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2"
+                      className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold text-xs rounded-2xl transition shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 disabled:opacity-60"
                     >
                       {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileCheck className="w-4 h-4" />}
                       Publish Official Laboratory Report
@@ -451,8 +451,9 @@ export default function LaboratoryDashboard() {
                   </form>
                 </div>
               ) : (
-                <div className="glass-card-pro rounded-3xl p-8 text-center opacity-60 text-xs font-semibold">
-                  Select a test request from the list to publish report.
+                <div className="glass-card-pro rounded-3xl p-10 text-center opacity-60 text-xs font-semibold border border-white/20 dark:border-slate-800/20">
+                  <FlaskConical className="w-10 h-10 mx-auto mb-3 text-indigo-400 opacity-50" />
+                  Select a test request from the list to open the report publisher.
                 </div>
               )}
             </div>
@@ -461,7 +462,6 @@ export default function LaboratoryDashboard() {
 
         </main>
       </div>
-
     </div>
   );
 }
