@@ -32,6 +32,8 @@ import api from '../../../lib/api';
 import { clearTokens } from '../../../lib/auth';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
 import DashboardHeader from '../../../components/DashboardHeader';
+import { getSocket } from '../../../lib/socket';
+import { exportPrescriptionPDF } from '../../../lib/pdfExport';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Appointment {
@@ -138,6 +140,26 @@ export default function DoctorDashboard() {
     if (!authLoading && user) fetchData();
   }, [authLoading, user, fetchData]);
 
+  useEffect(() => {
+    if (authLoading || !user) return;
+    const socket = getSocket();
+
+    const handleNewAppointment = (data: any) => {
+      showToast(`New appointment scheduled by ${data.patientName || 'a patient'}.`);
+      fetchData();
+      try {
+        const audio = new Audio('/notification.mp3');
+        audio.play().catch(() => {});
+      } catch (e) {}
+    };
+
+    socket.on('appointment-created', handleNewAppointment);
+
+    return () => {
+      socket.off('appointment-created', handleNewAppointment);
+    };
+  }, [authLoading, user, fetchData]);
+
   const updateStatus = async (appointmentId: string, status: string) => {
     setActionLoading(appointmentId + status);
     try {
@@ -176,9 +198,21 @@ export default function DoctorDashboard() {
         labRequests,
       });
 
+      if (prescriptions.length > 0) {
+        exportPrescriptionPDF({
+          doctorName: (user?.profile as any)?.fullName ?? 'Physician',
+          specialty: (user?.profile as any)?.specialty,
+          patientName: form.patientName || form.patientId,
+          patientId: form.patientId,
+          diagnosis: form.diagnosis,
+          notes: form.notes,
+          prescriptions,
+        });
+      }
+
       setForm(EMPTY_FORM);
       setShowRecordForm(false);
-      showToast('Medical record created successfully!');
+      showToast('Medical record created successfully! E-Prescription generated.');
     } catch (err: any) {
       showToast(err.response?.data?.error ?? 'Failed to create record.', false);
     } finally {
