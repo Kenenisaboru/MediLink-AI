@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { clearTokens } from '../../../lib/auth';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
+import DashboardHeader from '../../../components/DashboardHeader';
 
 interface ActiveSOS {
   sosId: string;
@@ -148,36 +149,8 @@ export default function AmbulanceDashboard() {
       <div className="fixed inset-0 bg-mesh -z-10 pointer-events-none" />
       <div className="fixed top-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-rose-500/10 blur-[120px] pointer-events-none animate-float" />
 
-      {/* Header */}
-      <header className="sticky top-0 z-30 glass-card-pro border-b border-rose-500/30 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 h-18 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center shadow-lg shadow-rose-500/30 animate-pulse">
-              <Siren className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <span className="font-black text-lg tracking-tight bg-gradient-to-r from-rose-500 via-red-500 to-amber-500 bg-clip-text text-transparent">
-                MediLink Ambulance Dispatch
-              </span>
-              <span className="text-[10px] font-bold tracking-wider uppercase text-rose-500 block mt-[-4px]">
-                Unit: {(user?.profile as any)?.vehicleNumber || 'CODE-3'} · Active Responder
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-extrabold px-3 py-1 rounded-xl bg-rose-500/10 text-rose-500 border border-rose-500/30 flex items-center gap-1.5">
-              <Radio className="w-3.5 h-3.5 animate-pulse" /> Dispatch Online
-            </span>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition"
-            >
-              <LogOut className="w-4 h-4" /> Logout
-            </button>
-          </div>
-        </div>
-      </header>
+      {/* Unified Header */}
+      <DashboardHeader userRole={user?.role} userName={(user?.profile as any)?.vehicleNumber || 'Responder Unit'} title="Ambulance Dispatch Telemetry" />
 
       <main className="max-w-7xl mx-auto px-6 py-10 space-y-10">
 
