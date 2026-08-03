@@ -26,6 +26,8 @@ import api from '../../../lib/api';
 import { clearTokens } from '../../../lib/auth';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
 import DashboardHeader from '../../../components/DashboardHeader';
+import { getSocket } from '../../../lib/socket';
+import { exportLabReportPDF } from '../../../lib/pdfExport';
 
 interface LabRequest {
   id: string;
@@ -88,6 +90,26 @@ export default function LaboratoryDashboard() {
     }
   }, [authLoading, user, fetchRequests]);
 
+  useEffect(() => {
+    if (authLoading || !user) return;
+    const socket = getSocket();
+
+    const handleLabRequested = (data: any) => {
+      showToast(`New lab test ordered by Dr. ${data.doctorName || 'a Doctor'}.`);
+      fetchRequests();
+      try {
+        const audio = new Audio('/notification.mp3');
+        audio.play().catch(() => {});
+      } catch (e) {}
+    };
+
+    socket.on('lab-requested', handleLabRequested);
+
+    return () => {
+      socket.off('lab-requested', handleLabRequested);
+    };
+  }, [authLoading, user, fetchRequests]);
+
   const handlePublishResult = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeRequest || !resultInput.trim()) {
@@ -103,7 +125,16 @@ export default function LaboratoryDashboard() {
         resultNotes: notesInput
       });
 
-      showToast('Diagnostic report published to patient file.');
+      exportLabReportPDF({
+        patientName: activeRequest.patientName,
+        testName: activeRequest.testName,
+        resultValue: resultInput,
+        resultNotes: notesInput,
+        aiExplanation: aiExplanation || undefined,
+        requestedBy: activeRequest.requestedBy
+      });
+
+      showToast('Diagnostic report published and PDF generated.');
       await fetchRequests();
     } catch (err: any) {
       showToast(err.response?.data?.error ?? 'Publication failed.', false);
