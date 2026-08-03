@@ -22,6 +22,7 @@ import {
 import api from '../../../lib/api';
 import { clearTokens } from '../../../lib/auth';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
+import DashboardHeader from '../../../components/DashboardHeader';
 
 interface LabRequest {
   id: string;
@@ -158,33 +159,8 @@ export default function LaboratoryDashboard() {
       <div className="fixed inset-0 bg-mesh -z-10 pointer-events-none" />
       <div className="fixed top-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-500/10 blur-[120px] pointer-events-none animate-float" />
 
-      {/* Header */}
-      <header className="sticky top-0 z-30 glass-card-pro border-b border-slate-200/40 dark:border-slate-800/40 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 h-18 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 animate-pulse-glow">
-              <FlaskConical className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <span className="font-black text-lg tracking-tight bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                MediLink Diagnostic Lab
-              </span>
-              <span className="text-[10px] font-bold tracking-wider uppercase text-indigo-500 block mt-[-4px]">
-                Diagnostics & Report Publishing Workstation
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition"
-            >
-              <LogOut className="w-4 h-4" /> Logout
-            </button>
-          </div>
-        </div>
-      </header>
+      {/* Unified Header */}
+      <DashboardHeader userRole={user?.role} userName={user?.email || 'Lab Technician'} title="Diagnostic Laboratory Workstation" />
 
       <main className="max-w-7xl mx-auto px-6 py-10 space-y-10">
 
