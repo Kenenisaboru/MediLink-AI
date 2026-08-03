@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { io, Socket } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
+import { getSocket } from '../../../lib/socket';
 import {
   Activity,
   Ambulance,
@@ -51,8 +52,7 @@ export default function AmbulanceDashboard() {
   useEffect(() => {
     if (authLoading || !user) return;
 
-    const socketHost = typeof window !== 'undefined' ? `http://${window.location.hostname}:5000` : 'http://localhost:5000';
-    const newSocket = io(socketHost);
+    const newSocket = getSocket();
     setSocket(newSocket);
     addLog('Connected to Socket.io Real-time Emergency Dispatch Gateway.');
 
@@ -81,7 +81,8 @@ export default function AmbulanceDashboard() {
     });
 
     return () => {
-      newSocket.close();
+      newSocket.off('new-sos-alert');
+      newSocket.off('sos-claimed');
     };
   }, [authLoading, user]);
 
