@@ -23,11 +23,14 @@ import {
   Filter,
   ShieldCheck,
   TrendingUp,
+  Download,
 } from 'lucide-react';
 import api from '../../../lib/api';
 import { clearTokens } from '../../../lib/auth';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
 import DashboardHeader from '../../../components/DashboardHeader';
+import { getSocket } from '../../../lib/socket';
+import { exportTelemetryCSV } from '../../../lib/pdfExport';
 
 interface InventoryItem {
   id: string;
@@ -109,6 +112,25 @@ export default function PharmacyDashboard() {
       fetchData();
     }
   }, [authLoading, user, fetchData]);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    const socket = getSocket();
+
+    const handleNewPrescription = (data: any) => {
+      showToast(`New E-Prescription issued by Dr. ${data.doctorName || 'a Doctor'}.`);
+      try {
+        const audio = new Audio('/notification.mp3');
+        audio.play().catch(() => {});
+      } catch (e) {}
+    };
+
+    socket.on('prescription-created', handleNewPrescription);
+
+    return () => {
+      socket.off('prescription-created', handleNewPrescription);
+    };
+  }, [authLoading, user]);
 
   const filtered = inventory.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -291,6 +313,16 @@ export default function PharmacyDashboard() {
             </div>
             
             <div className="flex flex-wrap items-center gap-3 shrink-0 z-10">
+              <button
+                onClick={() => {
+                  const rows = inventory.map(item => [item.name, item.category, item.quantity, item.price, item.batchNumber, item.expirationDate, item.status]);
+                  exportTelemetryCSV('Pharmacy_Inventory_Report', ['Name', 'Category', 'Quantity', 'Price', 'Batch', 'Expiration', 'Status'], rows);
+                  showToast('Inventory exported to CSV.');
+                }}
+                className="px-4 py-2.5 bg-white/60 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-extrabold text-xs rounded-2xl shadow-sm flex items-center gap-2 transition hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <Download className="w-4 h-4 text-emerald-500" /> Export CSV
+              </button>
               <button
                 onClick={() => {
                   setNewItem({ id: '', name: '', quantity: '', price: '', category: 'Analgesics', batchNumber: '', expirationDate: '' });
