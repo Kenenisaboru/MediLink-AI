@@ -55,13 +55,26 @@ export class AuthController {
           },
         });
       } else if (user.role === Role.DOCTOR) {
+        let hospital = await prisma.hospital.findFirst();
+        if (!hospital) {
+          hospital = await prisma.hospital.create({
+            data: {
+              name: 'Tikur Anbessa (Black Lion) Hospital',
+              address: 'Zewditu St',
+              city: 'Addis Ababa',
+              latitude: 9.0182,
+              longitude: 38.7490,
+              contactNumber: '+251115511211'
+            }
+          });
+        }
         await prisma.doctorProfile.create({
           data: {
             userId: user.id,
             fullName: name,
             specialty: profileData.specialty || 'General Medicine',
             licenseNumber: profileData.licenseNumber || `LIC-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-            hospitalId: profileData.hospitalId,
+            hospitalId: profileData.hospitalId || hospital.id,
           },
         });
       } else if (user.role === Role.PHARMACY) {
