@@ -214,7 +214,7 @@ export default function AdminDashboard() {
   });
 
   return (
-    <div className="min-h-screen relative pb-24 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-300">
+    <div className="min-h-screen relative pb-24 bg-slate-50 dark:bg-[#02060e] text-slate-800 dark:text-slate-100 transition-colors duration-300">
       
       {/* Dynamic Background Mesh */}
       <div className="fixed inset-0 bg-mesh -z-10 pointer-events-none" />
