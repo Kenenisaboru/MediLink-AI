@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import useRouterPath from 'next/navigation';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   Activity,
