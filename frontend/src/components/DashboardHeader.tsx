@@ -19,6 +19,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { clearTokens } from '../lib/auth';
+import { useLanguage } from './LanguageContext';
 
 interface DashboardHeaderProps {
   userRole?: string;
@@ -30,6 +31,8 @@ export default function DashboardHeader({ userRole = 'USER', userName, title }: 
   const router = useRouter();
   const pathname = usePathname();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+  const { language, setLanguage, t } = useLanguage();
 
   const handleLogout = () => {
     clearTokens();
@@ -127,6 +130,41 @@ export default function DashboardHeader({ userRole = 'USER', userName, title }: 
             )}
           </div>
 
+          {/* Language Selector */}
+          <div className="relative flex items-center pr-2">
+            <button
+              onClick={() => setLangDropdownOpen(!langDropdownOpen)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition border border-slate-200 dark:border-slate-700"
+            >
+              <Globe className="w-3.5 h-3.5 text-teal-500" />
+              <span className="uppercase">{language}</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </button>
+            {langDropdownOpen && (
+              <div className="absolute right-0 top-full mt-2 w-32 glass-card-pro rounded-2xl p-1.5 shadow-xl z-50">
+                {[
+                  { code: 'en', name: 'English' },
+                  { code: 'am', name: 'አማርኛ' },
+                  { code: 'om', name: 'Oromoo' },
+                  { code: 'ti', name: 'ትግርኛ' },
+                ].map((lang) => (
+                  <button
+                    key={lang.code}
+                    onClick={() => {
+                      setLanguage(lang.code as any);
+                      setLangDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-1.5 text-xs font-bold rounded-xl transition ${
+                      language === lang.code ? 'bg-teal-500/10 text-teal-600' : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {lang.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* User Profile / Logout */}
           <div className="flex items-center gap-2 pl-2 border-l border-slate-200/50 dark:border-slate-800/50">
             {userName && (
@@ -140,7 +178,7 @@ export default function DashboardHeader({ userRole = 'USER', userName, title }: 
               title="Logout Account"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Logout</span>
+              <span className="hidden sm:inline">{t('logout')}</span>
             </button>
           </div>
 
