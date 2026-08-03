@@ -17,9 +17,12 @@ import {
   Radio,
   Bell,
   Sparkles,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { clearTokens } from '../lib/auth';
 import { useLanguage } from './LanguageContext';
+import { useTheme } from './ThemeContext';
 
 interface DashboardHeaderProps {
   userRole?: string;
@@ -33,6 +36,7 @@ export default function DashboardHeader({ userRole = 'USER', userName, title }: 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     clearTokens();
@@ -165,8 +169,19 @@ export default function DashboardHeader({ userRole = 'USER', userName, title }: 
             )}
           </div>
 
+          {/* Theme Toggle */}
+          <div className="flex items-center pr-2 border-r border-slate-200/50 dark:border-slate-800/50">
+            <button
+              onClick={toggleTheme}
+              className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+              title="Toggle Dark Mode"
+            >
+              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </button>
+          </div>
+
           {/* User Profile / Logout */}
-          <div className="flex items-center gap-2 pl-2 border-l border-slate-200/50 dark:border-slate-800/50">
+          <div className="flex items-center gap-2 pl-2">
             {userName && (
               <span className="hidden lg:inline text-xs font-extrabold text-slate-700 dark:text-slate-300">
                 {userName}
