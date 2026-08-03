@@ -229,7 +229,7 @@ export default function PatientDashboard() {
   );
 
   return (
-    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-300">
+    <div className="min-h-screen flex bg-slate-50 dark:bg-[#02060e] text-slate-800 dark:text-slate-100 transition-colors duration-300">
       
       {/* Dynamic Background Depth */}
       <div className="fixed inset-0 bg-mesh -z-10 pointer-events-none" />
