@@ -30,11 +30,13 @@ import {
   SlidersHorizontal,
   FileCheck2,
   Sparkles,
+  Download,
 } from 'lucide-react';
 import api from '../../../lib/api';
 import { clearTokens } from '../../../lib/auth';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
 import DashboardHeader from '../../../components/DashboardHeader';
+import { exportTelemetryCSV } from '../../../lib/pdfExport';
 
 interface Metrics {
   patients: number;
@@ -252,6 +254,24 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 z-10">
+            <button
+              onClick={() => {
+                if (!metrics) return;
+                const rows = [
+                  ['Patients', metrics.patients],
+                  ['Doctors', metrics.doctors],
+                  ['Hospitals', metrics.hospitals],
+                  ['Revenue ETB', metrics.totalRevenue],
+                  ['Emergency Alerts', metrics.emergencyAlerts],
+                  ['Active Emergencies', metrics.activeEmergencies]
+                ];
+                exportTelemetryCSV('National_Telemetry_Report', ['Metric', 'Value'], rows);
+                showToast('Telemetry data exported to CSV.');
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/60 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition shadow-sm"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-500" /> Export CSV
+            </button>
             <button
               onClick={() => {
                 fetchData();
