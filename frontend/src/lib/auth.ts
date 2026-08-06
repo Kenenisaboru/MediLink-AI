@@ -9,6 +9,9 @@
 const ACCESS_TOKEN_KEY = 'medilink_access_token';
 const REFRESH_TOKEN_KEY = 'medilink_refresh_token';
 const USER_KEY = 'medilink_user';
+const SAVED_PHONE_KEY = 'medilink_saved_phone';
+const SAVED_PASSWORD_KEY = 'medilink_saved_password';
+const SAVED_REMEMBER_KEY = 'medilink_saved_remember';
 
 export interface StoredUser {
   id: string;
@@ -17,6 +20,12 @@ export interface StoredUser {
   role: string;
   isVerified: boolean;
   profile?: Record<string, unknown> | null;
+}
+
+export interface SavedCredentials {
+  phone: string;
+  password: string;
+  rememberMe: boolean;
 }
 
 // ── Save ────────────────────────────────────────────────────────────────────
@@ -34,6 +43,35 @@ export function saveTokens(accessToken: string, refreshToken: string): void {
 export function saveUser(user: StoredUser): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
+export function saveLoginCredentials(phone: string, password: string, rememberMe: boolean): void {
+  if (typeof window === 'undefined') return;
+  if (rememberMe) {
+    localStorage.setItem(SAVED_PHONE_KEY, phone);
+    localStorage.setItem(SAVED_PASSWORD_KEY, password);
+    localStorage.setItem(SAVED_REMEMBER_KEY, 'true');
+  } else {
+    localStorage.removeItem(SAVED_PHONE_KEY);
+    localStorage.removeItem(SAVED_PASSWORD_KEY);
+    localStorage.removeItem(SAVED_REMEMBER_KEY);
+  }
+}
+
+export function getSavedLoginCredentials(): SavedCredentials | null {
+  if (typeof window === 'undefined') return null;
+  const phone = localStorage.getItem(SAVED_PHONE_KEY);
+  const password = localStorage.getItem(SAVED_PASSWORD_KEY);
+  const rememberMe = localStorage.getItem(SAVED_REMEMBER_KEY) === 'true';
+  if (!phone || !password) return null;
+  return { phone, password, rememberMe };
+}
+
+export function clearSavedLoginCredentials(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(SAVED_PHONE_KEY);
+  localStorage.removeItem(SAVED_PASSWORD_KEY);
+  localStorage.removeItem(SAVED_REMEMBER_KEY);
 }
 
 // ── Read ─────────────────────────────────────────────────────────────────────
