@@ -2,7 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import * as jwt from 'jsonwebtoken';
 import { Role } from '@prisma/client';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_access_token_key_medilink_ai_2026';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required.');
+}
 
 export interface AuthenticatedRequest extends Request {
   user?: {
