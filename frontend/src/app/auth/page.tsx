@@ -17,7 +17,14 @@ import {
   User,
   UserPlus,
 } from 'lucide-react';
-import { saveTokens, saveUser, getDashboardForRole, isAuthenticated } from '../../lib/auth';
+import {
+  saveTokens,
+  saveUser,
+  saveLoginCredentials,
+  getSavedLoginCredentials,
+  getDashboardForRole,
+  isAuthenticated,
+} from '../../lib/auth';
 import { API_BASE_URL } from '../../lib/api';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -120,6 +127,7 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [rememberMe, setRememberMe] = useState(true);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -127,6 +135,15 @@ export default function AuthPage() {
       router.replace('/dashboard/patient');
     }
   }, [router]);
+
+  useEffect(() => {
+    const saved = getSavedLoginCredentials();
+    if (saved) {
+      setPhone(saved.phone);
+      setPassword(saved.password);
+      setRememberMe(saved.rememberMe);
+    }
+  }, []);
 
   const resetState = () => {
     setError(null);
@@ -152,6 +169,7 @@ export default function AuthPage() {
 
       saveTokens(data.accessToken, data.refreshToken);
       saveUser(data.user);
+      saveLoginCredentials(phone, password, rememberMe);
 
       const destination = getDashboardForRole(data.user.role);
       router.push(destination);
@@ -229,6 +247,7 @@ export default function AuthPage() {
 
       saveTokens(data.accessToken, data.refreshToken);
       saveUser(data.user);
+      saveLoginCredentials(registeredPhone, password, rememberMe);
 
       const destination = getDashboardForRole(data.user.role);
       router.push(destination);
@@ -382,6 +401,18 @@ export default function AuthPage() {
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                      />
+                      Remember phone & password
+                    </label>
                   </div>
 
                   <button
