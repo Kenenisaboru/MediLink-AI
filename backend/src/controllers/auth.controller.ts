@@ -4,8 +4,12 @@ import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { prisma } from '../utils/prisma';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_access_token_key_medilink_ai_2026';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'super_secret_jwt_refresh_token_key_medilink_ai_2026';
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
+
+if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
+  throw new Error('JWT_SECRET and JWT_REFRESH_SECRET environment variables are required.');
+}
 
 export class AuthController {
   static async register(req: Request, res: Response) {
@@ -29,13 +33,17 @@ export class AuthController {
       const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
       const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
+      const requestedRole = role as Role;
+      const allowedRegistrationRoles = [Role.PATIENT];
+      const userRole = allowedRegistrationRoles.includes(requestedRole) ? requestedRole : Role.PATIENT;
+
       // Create base user
       const user = await prisma.user.create({
         data: {
           email,
           phone,
           passwordHash,
-          role: (role as Role) || Role.PATIENT,
+          role: userRole,
           isVerified: false,
           otpCode,
           otpExpiresAt,
@@ -160,7 +168,6 @@ export class AuthController {
         userId: user.id,
         phone: user.phone,
         role: user.role,
-        otpDemo: otpCode, // Send back in dev response for ease of clinical testing
       });
     } catch (error: any) {
       console.error('Registration error:', error);
@@ -229,6 +236,10 @@ export class AuthController {
 
       if (!user) {
         return res.status(401).json({ error: 'Invalid phone number or password.' });
+      }
+
+      if (!user.isVerified) {
+        return res.status(403).json({ error: 'Phone number not verified. Please verify OTP before logging in.' });
       }
 
       const isMatch = await bcrypt.compare(password, user.passwordHash);
