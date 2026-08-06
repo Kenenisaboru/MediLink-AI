@@ -12,16 +12,26 @@ dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean)
+  : ['http://localhost:3000'];
+
 const io = new Server(server, {
   cors: {
-    origin: '*', // In production, replace with specific frontend domains
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
   },
 });
 
 // Configure middleware
 app.use(helmet());
-app.use(cors());
+app.use(
+  cors({
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // Set up API rate limiter (protecting server against DDoS)
