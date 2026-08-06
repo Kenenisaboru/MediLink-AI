@@ -8,6 +8,13 @@ export const metadata = {
   description: 'Digital Health Transformation Ecosystem: 24/7 AI Triage, GPS Ambulance SOS, Live Bed Search, Telebirr & Chapa payments.',
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
+};
+
 export default function RootLayout({
   children,
 }: {
