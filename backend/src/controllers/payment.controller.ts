@@ -37,17 +37,12 @@ export class PaymentController {
         },
       });
 
-      // Simulate payment gateway redirect URLs
-      let paymentUrl = '';
-      if (gateway === PaymentGateway.CHAPA) {
-        paymentUrl = `https://mock.chapa.co/checkout/${reference}`;
-      } else if (gateway === PaymentGateway.TELEBIRR) {
-        paymentUrl = `https://mock.telebirr.et/pay?reference=${reference}`;
-      } else if (gateway === PaymentGateway.SANTIMPAY) {
-        paymentUrl = `https://mock.santimpay.com/pay/${reference}`;
-      } else {
-        paymentUrl = `https://mock.cbebirr.et/ussd-push?ref=${reference}`;
-      }
+      // Use a local simulated checkout route so the frontend can handle mock payments reliably.
+      const gatewaySlug = gateway.toString().toLowerCase();
+      const encodedReference = encodeURIComponent(reference);
+      const encodedAmount = encodeURIComponent(amount.toString());
+
+      const paymentUrl = `/payments/checkout/${gatewaySlug}?reference=${encodedReference}&amount=${encodedAmount}`;
 
       res.status(200).json({
         message: 'Payment checkout initiated.',
