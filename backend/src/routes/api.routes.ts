@@ -28,6 +28,8 @@ router.get(
 );
 router.post(
   '/patient/symptom-check',
+  authenticateJWT as any,
+  authorizeRoles([Role.PATIENT]) as any,
   PatientController.symptomCheck as any
 );
 router.get(
