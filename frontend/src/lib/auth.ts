@@ -24,8 +24,11 @@ export function saveTokens(accessToken: string, refreshToken: string): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
   localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-  // Mirror access token into a cookie so Next.js middleware can read it
-  document.cookie = `medilink_token=${accessToken}; path=/; max-age=3600; SameSite=Strict`;
+
+  const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
+  // Mirror access token into a cookie so Next.js middleware can read it.
+  // The cookie is intentionally not HttpOnly because the edge middleware needs access.
+  document.cookie = `medilink_token=${accessToken}; path=/; max-age=3600; SameSite=Strict${secureFlag}`;
 }
 
 export function saveUser(user: StoredUser): void {
