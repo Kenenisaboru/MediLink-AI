@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Activity,
   Calendar,
@@ -10,7 +9,6 @@ import {
   FileText,
   HelpCircle,
   Loader2,
-  LogOut,
   Plus,
   Sparkles,
   User,
@@ -19,17 +17,11 @@ import {
   Pill,
   FlaskConical,
   AlertTriangle,
-  ChevronRight,
-  TrendingUp,
   Search,
-  Filter,
   X,
   Phone,
-  Mail,
-  HeartPulse,
 } from 'lucide-react';
 import api from '../../../lib/api';
-import { clearTokens } from '../../../lib/auth';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
 import DashboardHeader from '../../../components/DashboardHeader';
 import { getSocket } from '../../../lib/socket';
@@ -101,7 +93,6 @@ function formatDate(iso: string) {
 }
 
 export default function DoctorDashboard() {
-  const router = useRouter();
   const { user, loading: authLoading } = useAuthGuard('DOCTOR');
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
